@@ -1,14 +1,23 @@
 "use client";
 
 import { Copy } from "lucide-react";
+import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, SectionHeader } from "@/components/ui/card";
+import { useAuth } from "@/hooks/useAuth";
 import { useHousehold } from "@/hooks/useHousehold";
+import { ensureInviteCode } from "@/lib/firebase/firestore";
 import { useToast } from "@/components/ui/toast";
 
 export default function InvitePage() {
+  const { appUser } = useAuth();
   const { household, partner } = useHousehold();
   const { showToast } = useToast();
+
+  useEffect(() => {
+    if (!household || !appUser) return;
+    void ensureInviteCode(household, appUser);
+  }, [household, appUser]);
 
   async function copyCode() {
     if (!household) return;

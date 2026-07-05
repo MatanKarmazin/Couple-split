@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useEffect } from "react";
 import { CircleDollarSign, Home, LogOut, Plus, ReceiptText, Settings, WalletCards } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { signOutUser } from "@/lib/firebase/auth";
@@ -22,14 +23,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { appUser, loading } = useRequireAuth();
   const { household, loading: householdLoading } = useHousehold();
+  const needsOnboarding = !household && !householdLoading && pathname !== "/app/onboarding";
+
+  useEffect(() => {
+    if (needsOnboarding) {
+      router.replace("/app/onboarding");
+    }
+  }, [needsOnboarding, router]);
 
   if (loading || !appUser) {
     return <div className="grid min-h-screen place-items-center text-sm font-semibold text-ink/60">Loading CoupleSplit...</div>;
-  }
-
-  const needsOnboarding = !household && !householdLoading && pathname !== "/app/onboarding";
-  if (needsOnboarding) {
-    router.replace("/app/onboarding");
   }
 
   return (

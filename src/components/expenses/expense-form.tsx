@@ -24,7 +24,7 @@ export function ExpenseForm({
   const {
     register,
     handleSubmit,
-    watch,
+    getValues,
     setValue,
     formState: { errors }
   } = useForm<ExpenseFormValues>({
@@ -36,20 +36,32 @@ export function ExpenseForm({
       category: initialExpense?.category ?? "Food",
       paidByUid: initialExpense?.paidByUid ?? members[0]?.uid ?? "",
       splitType: "equal",
-      participants: initialExpense?.participants ?? members.map((member) => member.uid),
+      participants: members.map((member) => member.uid),
       notes: initialExpense?.notes ?? ""
     }
   });
 
-  const participants = watch("participants");
-  const splitType = watch("splitType");
-
   useEffect(() => {
-    if (!watch("paidByUid") && members[0]) setValue("paidByUid", members[0].uid);
-  }, [members, setValue, watch]);
+    const memberUids = members.map((member) => member.uid);
+    const paidByUid = getValues("paidByUid");
+
+    setValue("participants", memberUids, { shouldValidate: true });
+    setValue("splitType", "equal", { shouldValidate: true });
+    if (!paidByUid || !memberUids.includes(paidByUid)) {
+      setValue("paidByUid", members[0]?.uid ?? "", { shouldValidate: true });
+    }
+  }, [members, getValues, setValue]);
+
+  async function submit(values: ExpenseFormValues) {
+    await onSubmit({
+      ...values,
+      splitType: "equal",
+      participants: members.map((member) => member.uid)
+    });
+  }
 
   return (
-    <form className="grid gap-4" onSubmit={handleSubmit(onSubmit)}>
+    <form className="grid gap-4" onSubmit={handleSubmit(submit)}>
       <Field label="Description" error={errors.description?.message}>
         <Input placeholder="Dinner, groceries, rent..." {...register("description")} />
       </Field>
@@ -76,39 +88,6 @@ export function ExpenseForm({
             ))}
           </Select>
         </Field>
-      </div>
-      <Field label="Split type" error={errors.splitType?.message} hint="Exact, percentage, and shares are scaffolded for a later release.">
-        <Select {...register("splitType")} onChange={(event) => setValue("splitType", event.target.value as ExpenseFormValues["splitType"])}>
-          <option value="equal">Equal split</option>
-          <option value="exact" disabled>Exact amounts - coming soon</option>
-          <option value="percentage" disabled>Percentages - coming soon</option>
-          <option value="shares" disabled>Shares - coming soon</option>
-        </Select>
-      </Field>
-      {splitType !== "equal" ? (
-        <p className="rounded-md bg-honey/15 p-3 text-sm font-semibold text-ink">Only equal split is enabled in this MVP.</p>
-      ) : null}
-      <div className="grid gap-2">
-        <p className="text-sm font-medium text-ink">Participants</p>
-        <div className="grid gap-2 sm:grid-cols-2">
-          {members.map((member) => (
-            <label key={member.uid} className="flex items-center gap-3 rounded-md border border-sage/15 bg-white p-3 text-sm font-semibold text-ink">
-              <input
-                type="checkbox"
-                value={member.uid}
-                checked={participants?.includes(member.uid) ?? false}
-                onChange={(event) => {
-                  const next = new Set(participants ?? []);
-                  if (event.target.checked) next.add(member.uid);
-                  else next.delete(member.uid);
-                  setValue("participants", Array.from(next), { shouldValidate: true });
-                }}
-              />
-              {member.displayName}
-            </label>
-          ))}
-        </div>
-        {errors.participants?.message ? <span className="text-xs font-semibold text-coral">{errors.participants.message}</span> : null}
       </div>
       <Field label="Notes" error={errors.notes?.message}>
         <Textarea placeholder="Optional note" {...register("notes")} />

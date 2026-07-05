@@ -1,16 +1,15 @@
 import {
   addDoc,
+  arrayUnion,
   collection,
   doc,
-  getDocs,
-  limit,
+  getDoc,
   onSnapshot,
   orderBy,
   query,
   serverTimestamp,
   setDoc,
   updateDoc,
-  where,
   type Unsubscribe
 } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
@@ -79,6 +78,11 @@ export async function createHousehold(user: AppUser, name: string) {
     ...member,
     joinedAt: serverTimestamp()
   });
+  await setDoc(doc(db, "inviteCodes", inviteCode), {
+    householdId: householdRef.id,
+    createdByUid: user.uid,
+    createdAt: serverTimestamp()
+  });
   await updateDoc(doc(db, "users", user.uid), {
     defaultHouseholdId: householdRef.id,
     updatedAt: serverTimestamp()
@@ -87,20 +91,36 @@ export async function createHousehold(user: AppUser, name: string) {
   return householdRef.id;
 }
 
+export async function ensureInviteCode(household: Household, user: AppUser) {
+  if (household.createdByUid !== user.uid) return;
+
+  const inviteRef = doc(db, "inviteCodes", household.inviteCode);
+  const inviteSnapshot = await getDoc(inviteRef);
+  if (inviteSnapshot.exists()) return;
+
+  await setDoc(inviteRef, {
+    householdId: household.id,
+    createdByUid: user.uid,
+    createdAt: serverTimestamp()
+  });
+}
+
 export async function joinHousehold(user: AppUser, inviteCode: string) {
-  const matches = await getDocs(query(collection(db, "households"), where("inviteCode", "==", inviteCode), limit(1)));
-  if (matches.empty) throw new Error("No household found for that invite code.");
+  const inviteSnapshot = await getDoc(doc(db, "inviteCodes", inviteCode));
+  if (!inviteSnapshot.exists()) throw new Error("No household found for that invite code.");
 
-  const householdDoc = matches.docs[0];
-  const household = withId<Household>(householdDoc.id, householdDoc.data());
-  if (household.memberIds.includes(user.uid)) return household.id;
-  if (household.memberIds.length >= 2) throw new Error("This household already has two members.");
+  const { householdId } = inviteSnapshot.data() as { householdId: string };
+  await setDoc(doc(db, "inviteCodes", inviteCode, "joins", user.uid), {
+    uid: user.uid,
+    householdId,
+    createdAt: serverTimestamp()
+  });
 
-  await updateDoc(doc(db, "households", household.id), {
-    memberIds: [...household.memberIds, user.uid],
+  await updateDoc(doc(db, "households", householdId), {
+    memberIds: arrayUnion(user.uid),
     updatedAt: serverTimestamp()
   });
-  await setDoc(doc(db, "households", household.id, "members", user.uid), {
+  await setDoc(doc(db, "households", householdId, "members", user.uid), {
     uid: user.uid,
     displayName: user.displayName,
     email: user.email,
@@ -109,11 +129,11 @@ export async function joinHousehold(user: AppUser, inviteCode: string) {
     joinedAt: serverTimestamp()
   });
   await updateDoc(doc(db, "users", user.uid), {
-    defaultHouseholdId: household.id,
+    defaultHouseholdId: householdId,
     updatedAt: serverTimestamp()
   });
 
-  return household.id;
+  return householdId;
 }
 
 export async function saveExpense(
