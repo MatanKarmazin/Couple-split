@@ -56,7 +56,8 @@ service cloud.firestore {
 
     // Users can manage only their own profile document.
     match /users/{uid} {
-      allow read, create, update: if isSelf(uid) && request.resource.data.uid == request.auth.uid;
+      allow read: if isSelf(uid);
+      allow create, update: if isSelf(uid) && request.resource.data.uid == request.auth.uid;
       allow delete: if false;
     }
 
