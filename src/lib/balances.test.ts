@@ -37,6 +37,22 @@ describe("balance calculation", () => {
     expect(calculateBalances([expense], [settlement])).toEqual({ a: 2000, b: -2000 });
   });
 
+  it("ignores deleted settlements", () => {
+    const settlement: Settlement = {
+      id: "s1",
+      householdId: "h1",
+      fromUid: "b",
+      toUid: "a",
+      amountMinor: 3000,
+      currency: "ILS",
+      date: "2026-07-05",
+      createdByUid: "b",
+      deletedAt: "2026-07-06"
+    };
+
+    expect(calculateBalances([expense], [settlement])).toEqual({ a: 5000, b: -5000 });
+  });
+
   it("detects settled-up state", () => {
     const settlement: Settlement = {
       id: "s1",

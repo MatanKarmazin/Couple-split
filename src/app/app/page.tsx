@@ -1,27 +1,42 @@
 "use client";
 
 import Link from "next/link";
-import { Plus, WalletCards } from "lucide-react";
+import { useState } from "react";
+import { Plus, Trash2, WalletCards } from "lucide-react";
 import { BalanceCard } from "@/components/dashboard/balance-card";
 import { ExpenseCard } from "@/components/expenses/expense-card";
+import { RecurringBillsSummary } from "@/components/recurring-bills-panel";
 import { Button } from "@/components/ui/button";
 import { Card, SectionHeader } from "@/components/ui/card";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useAuth } from "@/hooks/useAuth";
 import { useExpenses } from "@/hooks/useExpenses";
 import { useHousehold } from "@/hooks/useHousehold";
 import { useSettlements } from "@/hooks/useSettlements";
 import { calculateBalances, totalSpendingForMonth } from "@/lib/balances";
 import { formatDate } from "@/lib/dates";
+import { softDeleteSettlement } from "@/lib/firebase/firestore";
 import { formatMoney } from "@/lib/money";
+import type { Settlement } from "@/types";
+import { useToast } from "@/components/ui/toast";
 
 export default function DashboardPage() {
   const { appUser } = useAuth();
   const { household, members, partner } = useHousehold();
   const { activeExpenses } = useExpenses(household?.id);
-  const { settlements } = useSettlements(household?.id);
-  const balances = calculateBalances(activeExpenses, settlements);
+  const { activeSettlements } = useSettlements(household?.id);
+  const { showToast } = useToast();
+  const [settlementToDelete, setSettlementToDelete] = useState<Settlement | null>(null);
+  const balances = calculateBalances(activeExpenses, activeSettlements);
   const myBalance = appUser ? balances[appUser.uid] ?? 0 : 0;
   const monthTotal = totalSpendingForMonth(activeExpenses, new Date());
+
+  async function removeSettlement() {
+    if (!household || !settlementToDelete) return;
+    await softDeleteSettlement(household.id, settlementToDelete.id);
+    showToast({ title: "Settlement deleted" });
+    setSettlementToDelete(null);
+  }
 
   return (
     <div className="grid gap-5">
@@ -55,24 +70,42 @@ export default function DashboardPage() {
             <Card className="text-sm text-ink/60">No expenses yet. Add the first shared cost when you are ready.</Card>
           )}
         </section>
-        <section className="grid content-start gap-3">
-          <SectionHeader title="Recent settlements" />
-          {settlements.slice(0, 5).length ? (
-            settlements.slice(0, 5).map((settlement) => {
-              const from = members.find((member) => member.uid === settlement.fromUid)?.displayName ?? "Someone";
-              const to = members.find((member) => member.uid === settlement.toUid)?.displayName ?? "someone";
-              return (
-                <Card key={settlement.id} className="p-3">
-                  <p className="text-sm font-bold text-ink">{from} paid {to}</p>
-                  <p className="mt-1 text-sm text-ink/60">{formatMoney(settlement.amountMinor)} · {formatDate(settlement.date)}</p>
-                </Card>
-              );
-            })
-          ) : (
-            <Card className="text-sm text-ink/60">No settlement payments recorded.</Card>
-          )}
-        </section>
+        <div className="grid content-start gap-5">
+          <RecurringBillsSummary />
+          <section className="grid content-start gap-3">
+            <SectionHeader title="Recent settlements" />
+            {activeSettlements.slice(0, 5).length ? (
+              activeSettlements.slice(0, 5).map((settlement) => {
+                const from = members.find((member) => member.uid === settlement.fromUid)?.displayName ?? "Someone";
+                const to = members.find((member) => member.uid === settlement.toUid)?.displayName ?? "someone";
+                return (
+                  <Card key={settlement.id} className="p-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-bold text-ink">{from} paid {to}</p>
+                        <p className="mt-1 text-sm text-ink/60">{formatMoney(settlement.amountMinor)} - {formatDate(settlement.date)}</p>
+                      </div>
+                      <Button variant="ghost" className="h-9 px-2" onClick={() => setSettlementToDelete(settlement)} aria-label="Delete settlement">
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </Card>
+                );
+              })
+            ) : (
+              <Card className="text-sm text-ink/60">No settlement payments recorded.</Card>
+            )}
+          </section>
+        </div>
       </div>
+      <ConfirmDialog
+        open={Boolean(settlementToDelete)}
+        title="Delete this settlement?"
+        message="This will remove the payment from balance calculations."
+        confirmLabel="Delete"
+        onCancel={() => setSettlementToDelete(null)}
+        onConfirm={() => void removeSettlement()}
+      />
     </div>
   );
 }

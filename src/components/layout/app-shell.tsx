@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { signOutUser } from "@/lib/firebase/auth";
 import { useRequireAuth } from "@/hooks/useAuth";
 import { useHousehold } from "@/hooks/useHousehold";
+import { useRecurringBills } from "@/hooks/useRecurringBills";
 import { cn } from "@/lib/utils";
 
 const navItems = [
@@ -22,8 +23,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const { appUser, loading } = useRequireAuth();
-  const { household, loading: householdLoading } = useHousehold();
+  const { household, members, loading: householdLoading } = useHousehold();
   const needsOnboarding = !household && !householdLoading && pathname !== "/app/onboarding";
+  useRecurringBills(household?.id, members);
 
   useEffect(() => {
     if (needsOnboarding) {

@@ -68,6 +68,8 @@ export type Expense = {
   shares: Record<string, number>;
   date: FirestoreDate;
   notes?: string;
+  recurringBillId?: string;
+  recurringOccurrenceKey?: string;
   createdByUid: string;
   createdAt?: FirestoreDate;
   updatedAt?: FirestoreDate;
@@ -86,6 +88,25 @@ export type Settlement = {
   createdByUid: string;
   createdAt?: FirestoreDate;
   updatedAt?: FirestoreDate;
+  deletedAt?: FirestoreDate;
+};
+
+export type RecurringBill = {
+  id: string;
+  householdId: string;
+  description: string;
+  amountMinor: number;
+  currency: CurrencyCode;
+  category: Category;
+  paidByUid: string;
+  dayOfMonth: number;
+  startMonth: string;
+  active: boolean;
+  notes?: string;
+  createdByUid: string;
+  createdAt?: FirestoreDate;
+  updatedAt?: FirestoreDate;
+  deletedAt?: FirestoreDate;
 };
 
 export type BalanceMap = Record<string, number>;

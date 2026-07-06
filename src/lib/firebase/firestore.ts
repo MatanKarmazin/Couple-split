@@ -15,8 +15,8 @@ import {
 import { db } from "@/lib/firebase/client";
 import { calculateEqualShares, parseMoneyToMinor } from "@/lib/money";
 import { generateInviteCode } from "@/lib/utils";
-import type { AppUser, Expense, Household, HouseholdMember, Settlement } from "@/types";
-import type { ExpenseFormValues, SettlementFormValues } from "@/lib/validators";
+import type { AppUser, Expense, Household, HouseholdMember, RecurringBill, Settlement } from "@/types";
+import type { ExpenseFormValues, RecurringBillFormValues, SettlementFormValues } from "@/lib/validators";
 
 function withId<T>(id: string, data: Record<string, unknown>) {
   return { id, ...data } as T;
@@ -51,6 +51,13 @@ export function listenToSettlements(householdId: string, callback: (settlements:
   return onSnapshot(
     query(collection(db, "households", householdId, "settlements"), orderBy("date", "desc")),
     (snapshot) => callback(snapshot.docs.map((item) => withId<Settlement>(item.id, item.data())))
+  );
+}
+
+export function listenToRecurringBills(householdId: string, callback: (bills: RecurringBill[]) => void): Unsubscribe {
+  return onSnapshot(
+    query(collection(db, "households", householdId, "recurringBills"), orderBy("description", "asc")),
+    (snapshot) => callback(snapshot.docs.map((item) => withId<RecurringBill>(item.id, item.data())))
   );
 }
 
@@ -179,6 +186,99 @@ export async function softDeleteExpense(householdId: string, expenseId: string) 
   });
 }
 
+export async function saveRecurringBill(
+  householdId: string,
+  userUid: string,
+  values: RecurringBillFormValues,
+  billId?: string
+) {
+  const payload = {
+    householdId,
+    description: values.description,
+    amountMinor: parseMoneyToMinor(values.amount),
+    currency: "ILS",
+    category: values.category,
+    paidByUid: values.paidByUid,
+    dayOfMonth: values.dayOfMonth,
+    startMonth: values.startMonth,
+    active: values.active,
+    notes: values.notes ?? "",
+    updatedAt: serverTimestamp()
+  };
+
+  if (billId) {
+    await updateDoc(doc(db, "households", householdId, "recurringBills", billId), payload);
+    return billId;
+  }
+
+  const billRef = await addDoc(collection(db, "households", householdId, "recurringBills"), {
+    ...payload,
+    createdByUid: userUid,
+    createdAt: serverTimestamp()
+  });
+  return billRef.id;
+}
+
+export async function softDeleteRecurringBill(householdId: string, billId: string) {
+  await updateDoc(doc(db, "households", householdId, "recurringBills", billId), {
+    active: false,
+    deletedAt: serverTimestamp(),
+    updatedAt: serverTimestamp()
+  });
+}
+
+export async function toggleRecurringBill(householdId: string, billId: string, active: boolean) {
+  await updateDoc(doc(db, "households", householdId, "recurringBills", billId), {
+    active,
+    updatedAt: serverTimestamp()
+  });
+}
+
+export async function materializeDueRecurringExpenses(
+  householdId: string,
+  userUid: string,
+  members: HouseholdMember[],
+  bills: RecurringBill[],
+  today = new Date()
+) {
+  const memberUids = members.map((member) => member.uid);
+  if (!memberUids.length) return;
+
+  for (const bill of bills.filter((item) => item.active && !item.deletedAt)) {
+    if (!memberUids.includes(bill.paidByUid)) continue;
+
+    for (const month of dueMonths(bill.startMonth, today)) {
+      const date = dueDateForMonth(month, bill.dayOfMonth);
+      if (date > today) continue;
+
+      const recurringOccurrenceKey = `${bill.id}_${month}`;
+      const expenseRef = doc(db, "households", householdId, "expenses", recurringOccurrenceKey);
+      const existingExpense = await getDoc(expenseRef);
+      if (existingExpense.exists()) continue;
+
+      const shares = calculateEqualShares(bill.amountMinor, memberUids);
+      await setDoc(expenseRef, {
+        householdId,
+        description: bill.description,
+        amountMinor: bill.amountMinor,
+        currency: "ILS",
+        category: bill.category,
+        paidByUid: bill.paidByUid,
+        splitType: "equal",
+        participants: memberUids,
+        shares,
+        date: formatInputDate(date),
+        notes: bill.notes ?? "",
+        recurringBillId: bill.id,
+        recurringOccurrenceKey,
+        createdByUid: userUid,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      });
+    }
+  }
+}
+
 export async function createSettlement(householdId: string, userUid: string, values: SettlementFormValues) {
   const settlementRef = await addDoc(collection(db, "households", householdId, "settlements"), {
     householdId,
@@ -193,4 +293,37 @@ export async function createSettlement(householdId: string, userUid: string, val
     updatedAt: serverTimestamp()
   });
   return settlementRef.id;
+}
+
+export async function softDeleteSettlement(householdId: string, settlementId: string) {
+  await updateDoc(doc(db, "households", householdId, "settlements", settlementId), {
+    deletedAt: serverTimestamp(),
+    updatedAt: serverTimestamp()
+  });
+}
+
+function dueMonths(startMonth: string, today: Date) {
+  const [startYear, startMonthNumber] = startMonth.split("-").map(Number);
+  if (!startYear || !startMonthNumber) return [];
+
+  const months: string[] = [];
+  const cursor = new Date(startYear, startMonthNumber - 1, 1);
+  const end = new Date(today.getFullYear(), today.getMonth(), 1);
+
+  while (cursor <= end) {
+    months.push(`${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, "0")}`);
+    cursor.setMonth(cursor.getMonth() + 1);
+  }
+
+  return months;
+}
+
+function dueDateForMonth(month: string, dayOfMonth: number) {
+  const [year, monthNumber] = month.split("-").map(Number);
+  const lastDay = new Date(year, monthNumber, 0).getDate();
+  return new Date(year, monthNumber - 1, Math.min(dayOfMonth, lastDay));
+}
+
+function formatInputDate(date: Date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }

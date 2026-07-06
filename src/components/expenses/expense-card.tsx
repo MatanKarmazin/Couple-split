@@ -16,8 +16,11 @@ export function ExpenseCard({ expense, members }: { expense: Expense; members: H
             <CategoryIcon category={expense.category} />
           </div>
           <div className="min-w-0">
-            <p className="truncate text-sm font-bold text-ink">{expense.description}</p>
-            <p className="mt-1 text-xs text-ink/55">Paid by {payer} · {formatDate(expense.date)}</p>
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="truncate text-sm font-bold text-ink">{expense.description}</p>
+              {expense.recurringBillId ? <Badge>Recurring</Badge> : null}
+            </div>
+            <p className="mt-1 text-xs text-ink/55">Paid by {payer} - {formatDate(expense.date)}</p>
           </div>
         </div>
         <div className="shrink-0 text-right">

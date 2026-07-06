@@ -24,10 +24,10 @@ export default function SettleUpPage() {
   const { appUser } = useAuth();
   const { household, members, partner } = useHousehold();
   const { activeExpenses } = useExpenses(household?.id);
-  const { settlements } = useSettlements(household?.id);
+  const { activeSettlements } = useSettlements(household?.id);
   const { showToast } = useToast();
   const [submitting, setSubmitting] = useState(false);
-  const balances = calculateBalances(activeExpenses, settlements);
+  const balances = calculateBalances(activeExpenses, activeSettlements);
   const myBalance = appUser ? balances[appUser.uid] ?? 0 : 0;
 
   const defaults = useMemo(() => {

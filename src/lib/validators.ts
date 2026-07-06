@@ -59,7 +59,25 @@ export const settlementSchema = z.object({
   path: ["toUid"]
 });
 
+export const recurringBillSchema = z.object({
+  description: z.string().trim().min(2, "Add a short description.").max(80),
+  amount: z.string().trim().refine((value) => {
+    try {
+      return parseMoneyToMinor(value) > 0;
+    } catch {
+      return false;
+    }
+  }, "Enter a valid positive amount."),
+  category: z.enum(categories),
+  paidByUid: z.string().min(1, "Choose who pays."),
+  dayOfMonth: z.coerce.number().int().min(1, "Use a day from 1 to 31.").max(31, "Use a day from 1 to 31."),
+  startMonth: z.string().regex(/^\d{4}-\d{2}$/, "Choose a start month."),
+  active: z.boolean(),
+  notes: z.string().max(240).optional()
+});
+
 export type ExpenseFormValues = z.infer<typeof expenseSchema>;
 export type HouseholdFormValues = z.infer<typeof householdSchema>;
 export type JoinHouseholdFormValues = z.infer<typeof joinHouseholdSchema>;
 export type SettlementFormValues = z.infer<typeof settlementSchema>;
+export type RecurringBillFormValues = z.infer<typeof recurringBillSchema>;

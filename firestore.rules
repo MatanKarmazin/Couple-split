@@ -86,6 +86,29 @@ service cloud.firestore {
         && request.resource.data.fromUid != request.resource.data.toUid;
     }
 
+    function validSettlementSoftDelete(householdId) {
+      return isHouseholdMember(householdId)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["deletedAt", "updatedAt"])
+        && request.resource.data.createdByUid == resource.data.createdByUid
+        && request.resource.data.householdId == householdId;
+    }
+
+    function validRecurringBillWrite(householdId) {
+      return isHouseholdMember(householdId)
+        && request.resource.data.householdId == householdId
+        && request.resource.data.amountMinor is int
+        && request.resource.data.amountMinor > 0
+        && request.resource.data.currency == "ILS"
+        && request.resource.data.description is string
+        && request.resource.data.category is string
+        && request.resource.data.paidByUid in householdData(householdId).memberIds
+        && request.resource.data.dayOfMonth is int
+        && request.resource.data.dayOfMonth >= 1
+        && request.resource.data.dayOfMonth <= 31
+        && request.resource.data.startMonth is string
+        && request.resource.data.active is bool;
+    }
+
     // Users can manage only their own profile document.
     match /users/{uid} {
       allow read: if isSelf(uid);
@@ -139,12 +162,19 @@ service cloud.firestore {
         allow delete: if false;
       }
 
+      match /recurringBills/{recurringBillId} {
+        allow read: if isHouseholdMember(householdId);
+        allow create: if validRecurringBillWrite(householdId)
+          && request.resource.data.createdByUid == request.auth.uid;
+        allow update: if validRecurringBillWrite(householdId)
+          && request.resource.data.createdByUid == resource.data.createdByUid;
+        allow delete: if false;
+      }
+
       match /settlements/{settlementId} {
         allow read: if isHouseholdMember(householdId);
         allow create: if validSettlementCreate(householdId);
-        allow update: if isHouseholdMember(householdId)
-          && request.resource.data.createdByUid == resource.data.createdByUid
-          && request.resource.data.householdId == householdId;
+        allow update: if validSettlementSoftDelete(householdId);
         allow delete: if false;
       }
     }

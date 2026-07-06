@@ -14,7 +14,7 @@ export function calculateBalances(expenses: Expense[], settlements: Settlement[]
     }
   }
 
-  for (const settlement of settlements) {
+  for (const settlement of settlements.filter((item) => !item.deletedAt)) {
     add(settlement.fromUid, settlement.amountMinor);
     add(settlement.toUid, -settlement.amountMinor);
   }

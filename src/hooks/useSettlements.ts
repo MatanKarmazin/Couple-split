@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { listenToSettlements } from "@/lib/firebase/firestore";
 import type { Settlement } from "@/types";
 
@@ -22,5 +22,6 @@ export function useSettlements(householdId?: string) {
     });
   }, [householdId]);
 
-  return { settlements, loading };
+  const activeSettlements = useMemo(() => settlements.filter((settlement) => !settlement.deletedAt), [settlements]);
+  return { settlements, activeSettlements, loading };
 }
