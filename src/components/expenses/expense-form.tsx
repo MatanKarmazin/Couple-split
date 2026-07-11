@@ -1,13 +1,21 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select, Textarea } from "@/components/ui/input";
 import { categories, expenseSchema, type ExpenseFormValues } from "@/lib/validators";
 import { inputDate } from "@/lib/dates";
-import { minorToInput } from "@/lib/money";
+import {
+  calculateAmountShares,
+  calculateEqualShares,
+  calculateOnePersonShares,
+  calculatePercentageShares,
+  formatMoney,
+  minorToInput,
+  parseMoneyToMinor
+} from "@/lib/money";
 import type { Expense, HouseholdMember } from "@/types";
 
 export function ExpenseForm({
@@ -46,6 +54,25 @@ export function ExpenseForm({
   });
 
   const splitType = watch("splitType");
+  const amount = watch("amount");
+  const paidByUid = watch("paidByUid");
+  const owedByUid = watch("owedByUid");
+  const shareAmounts = watch("shareAmounts");
+  const sharePercentages = watch("sharePercentages");
+  const splitPreview = useMemo(
+    () =>
+      buildSplitPreview({
+        amount,
+        splitType,
+        paidByUid,
+        owedByUid,
+        shareAmounts,
+        sharePercentages,
+        members
+      }),
+    [amount, members, owedByUid, paidByUid, shareAmounts, sharePercentages, splitType]
+  );
+
   useEffect(() => {
     const memberUids = members.map((member) => member.uid);
     const paidByUid = getValues("paidByUid");
@@ -146,9 +173,75 @@ export function ExpenseForm({
       <Field label="Notes" error={errors.notes?.message}>
         <Textarea placeholder="Optional note" {...register("notes")} />
       </Field>
+      <div className="rounded-lg bg-surface-muted p-4">
+        <p className="text-sm font-bold text-text">Split preview</p>
+        {splitPreview ? (
+          <div className="mt-2 grid gap-2 text-sm text-text-muted">
+            <p>
+              {splitPreview.payerName} pays {formatMoney(splitPreview.amountMinor)}.
+            </p>
+            <div className="grid gap-1">
+              {splitPreview.shares.map((share) => (
+                <div key={share.uid} className="flex items-center justify-between gap-3 rounded-md bg-surface/70 px-3 py-2">
+                  <span className="font-semibold text-text">{share.name}</span>
+                  <span>{formatMoney(share.amountMinor)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <p className="mt-1 text-sm text-text-muted">Enter an amount and split details to preview who owes what.</p>
+        )}
+      </div>
       <Button type="submit" disabled={submitting}>{submitting ? "Saving..." : "Save expense"}</Button>
     </form>
   );
+}
+
+function buildSplitPreview({
+  amount,
+  splitType,
+  paidByUid,
+  owedByUid,
+  shareAmounts,
+  sharePercentages,
+  members
+}: {
+  amount: string;
+  splitType: ExpenseFormValues["splitType"];
+  paidByUid: string;
+  owedByUid?: string;
+  shareAmounts?: Record<string, string>;
+  sharePercentages?: Record<string, string>;
+  members: HouseholdMember[];
+}) {
+  const participants = members.map((member) => member.uid);
+  if (!participants.length || !paidByUid) return null;
+
+  try {
+    const amountMinor = parseMoneyToMinor(amount);
+    const shares =
+      splitType === "one_person"
+        ? calculateOnePersonShares(amountMinor, participants, owedByUid ?? "")
+        : splitType === "amounts"
+          ? calculateAmountShares(amountMinor, participants, shareAmounts)
+          : splitType === "percentage"
+            ? calculatePercentageShares(amountMinor, participants, sharePercentages)
+            : calculateEqualShares(amountMinor, participants);
+    const payerName = members.find((member) => member.uid === paidByUid)?.displayName ?? "Someone";
+
+    return {
+      amountMinor,
+      payerName,
+      shares: members.map((member) => ({
+        uid: member.uid,
+        name: member.displayName,
+        amountMinor: shares[member.uid] ?? 0
+      }))
+    };
+  } catch {
+    return null;
+  }
 }
 
 function owedByDefault(expense: Expense | undefined, members: HouseholdMember[]) {

@@ -4,8 +4,32 @@
 
 :root {
   color-scheme: light;
-  background: #f7faf8;
-  color: #1f2933;
+  --background: 42 45% 96%;
+  --surface: 0 0% 100%;
+  --surface-muted: 39 38% 91%;
+  --text: 222 34% 14%;
+  --text-muted: 224 12% 43%;
+  --primary: 238 57% 55%;
+  --accent: 39 91% 56%;
+  --danger: 6 70% 61%;
+  --border: 232 18% 83%;
+  --shadow: 222 34% 14%;
+  background: hsl(var(--background));
+  color: hsl(var(--text));
+}
+
+.dark {
+  color-scheme: dark;
+  --background: 224 31% 8%;
+  --surface: 225 27% 13%;
+  --surface-muted: 225 23% 18%;
+  --text: 42 33% 94%;
+  --text-muted: 225 13% 70%;
+  --primary: 239 84% 72%;
+  --accent: 39 92% 62%;
+  --danger: 6 78% 68%;
+  --border: 225 18% 26%;
+  --shadow: 0 0% 0%;
 }
 
 * {
@@ -16,9 +40,9 @@ body {
   min-height: 100vh;
   margin: 0;
   background:
-    radial-gradient(circle at top left, rgba(240, 184, 79, 0.18), transparent 34rem),
-    linear-gradient(180deg, #f7faf8 0%, #eef5f2 100%);
-  color: #1f2933;
+    radial-gradient(circle at top left, hsl(var(--accent) / 0.14), transparent 34rem),
+    linear-gradient(180deg, hsl(var(--background)) 0%, hsl(var(--surface-muted)) 100%);
+  color: hsl(var(--text));
 }
 
 button,
@@ -29,5 +53,5 @@ textarea {
 }
 
 .focus-ring {
-  @apply focus:outline-none focus:ring-2 focus:ring-sage/35 focus:ring-offset-2 focus:ring-offset-white;
+  @apply focus:outline-none focus:ring-2 focus:ring-primary/35 focus:ring-offset-2 focus:ring-offset-surface;
 }

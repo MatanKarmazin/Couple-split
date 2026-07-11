@@ -89,7 +89,7 @@ export function RecurringBillsPanel() {
         <Card>
           <form className="grid gap-4" onSubmit={form.handleSubmit(submit)}>
             <div className="flex items-center justify-between gap-3">
-              <h2 className="text-base font-bold text-ink">{editingBill ? "Edit recurring bill" : "Add recurring bill"}</h2>
+              <h2 className="text-base font-bold text-text">{editingBill ? "Edit recurring bill" : "Add recurring bill"}</h2>
               {editingBill ? <Button variant="ghost" onClick={() => setEditingBill(null)}>Cancel</Button> : null}
             </div>
             <Field label="Description" error={form.formState.errors.description?.message}>
@@ -127,7 +127,7 @@ export function RecurringBillsPanel() {
               </Field>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
-              <label className="flex min-h-11 items-center gap-3 rounded-md border border-sage/15 bg-white px-3 text-sm font-semibold text-ink">
+              <label className="flex min-h-11 items-center gap-3 rounded-md border border-border bg-surface px-3 text-sm font-semibold text-text">
                 <input type="checkbox" {...form.register("active")} />
                 Active
               </label>
@@ -153,8 +153,8 @@ export function RecurringBillsPanel() {
               onDelete={setConfirmBill}
             />
           )) : (
-            <Card className="grid place-items-center gap-2 py-8 text-center text-sm text-ink/60">
-              <CalendarClock className="h-8 w-8 text-sage" />
+            <Card className="grid place-items-center gap-2 py-8 text-center text-sm text-text-muted">
+              <CalendarClock className="h-8 w-8 text-primary" />
               No recurring bills yet.
             </Card>
           )}
@@ -187,17 +187,17 @@ export function RecurringBillsSummary() {
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
-                  <p className="truncate text-sm font-bold text-ink">{bill.description}</p>
+                  <p className="truncate text-sm font-bold text-text">{bill.description}</p>
                   <Badge>{bill.active ? "Active" : "Paused"}</Badge>
                 </div>
-                <p className="mt-1 text-xs text-ink/55">Paid by {payer} - {frequencyLabel(bill)} - next {formatDate(nextDueDate(bill))}</p>
+                <p className="mt-1 text-xs text-text-muted">Paid by {payer} - {frequencyLabel(bill)} - next {formatDate(nextDueDate(bill))}</p>
               </div>
-              <p className="shrink-0 text-sm font-bold text-ink">{formatMoney(bill.amountMinor)}</p>
+              <p className="shrink-0 text-sm font-bold text-text">{formatMoney(bill.amountMinor)}</p>
             </div>
           </Card>
         );
       }) : (
-        <Card className="text-sm text-ink/60">No recurring bills yet.</Card>
+        <Card className="text-sm text-text-muted">No recurring bills yet.</Card>
       )}
     </section>
   );
@@ -223,17 +223,17 @@ function RecurringBillCard({
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <h2 className="truncate text-sm font-bold text-ink">{bill.description}</h2>
+            <h2 className="truncate text-sm font-bold text-text">{bill.description}</h2>
             <Badge>{bill.active ? "Active" : "Paused"}</Badge>
           </div>
-          <p className="mt-1 text-xs text-ink/55">Paid by {payer} - {frequencyLabel(bill)} - next {formatDate(nextDueDate(bill))}</p>
+          <p className="mt-1 text-xs text-text-muted">Paid by {payer} - {frequencyLabel(bill)} - next {formatDate(nextDueDate(bill))}</p>
         </div>
         <div className="text-right">
-          <p className="text-sm font-bold text-ink">{formatMoney(bill.amountMinor)}</p>
-          <p className="mt-1 text-xs text-ink/55">{bill.category}</p>
+          <p className="text-sm font-bold text-text">{formatMoney(bill.amountMinor)}</p>
+          <p className="mt-1 text-xs text-text-muted">{bill.category}</p>
         </div>
       </div>
-      {bill.notes ? <p className="text-sm text-ink/60">{bill.notes}</p> : null}
+      {bill.notes ? <p className="text-sm text-text-muted">{bill.notes}</p> : null}
       <div className="flex flex-wrap gap-2">
         <Button variant="secondary" onClick={() => onEdit(bill)}><Pencil className="h-4 w-4" />Edit</Button>
         <Button variant="secondary" onClick={() => void onToggle(bill)}><Power className="h-4 w-4" />{bill.active ? "Pause" : "Resume"}</Button>

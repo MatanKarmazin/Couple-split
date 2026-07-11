@@ -50,7 +50,7 @@ export default function ExpenseDetailPage() {
   }
 
   if (!expense) {
-    return <Card className="text-sm text-ink/60">Expense not found or still loading.</Card>;
+    return <Card className="text-sm text-text-muted">Expense not found or still loading.</Card>;
   }
 
   const payer = members.find((member) => member.uid === expense.paidByUid)?.displayName ?? "Someone";
@@ -77,8 +77,8 @@ export default function ExpenseDetailPage() {
       ) : (
         <Card className="grid gap-4">
           <div>
-            <p className="text-sm font-semibold text-ink/60">Amount</p>
-            <p className="mt-1 text-3xl font-bold text-ink">{formatMoney(expense.amountMinor)}</p>
+            <p className="text-sm font-semibold text-text-muted">Amount</p>
+            <p className="mt-1 text-3xl font-bold text-text">{formatMoney(expense.amountMinor)}</p>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             <Info label="Paid by" value={payer} />
@@ -109,9 +109,9 @@ function splitLabel(splitType: string) {
 
 function Info({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-md bg-mist p-3">
-      <p className="text-xs font-bold uppercase tracking-wide text-sage">{label}</p>
-      <p className="mt-1 text-sm font-semibold text-ink">{value}</p>
+    <div className="rounded-md bg-surface-muted p-3">
+      <p className="text-xs font-bold uppercase tracking-wide text-primary">{label}</p>
+      <p className="mt-1 text-sm font-semibold text-text">{value}</p>
     </div>
   );
 }

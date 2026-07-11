@@ -3,26 +3,40 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, SectionHeader } from "@/components/ui/card";
+import { Select } from "@/components/ui/input";
 import { useAuth } from "@/hooks/useAuth";
 import { useHousehold } from "@/hooks/useHousehold";
+import { useTheme, type ThemeMode } from "@/hooks/useTheme";
 import { signOutUser } from "@/lib/firebase/auth";
 
 export default function SettingsPage() {
   const { appUser } = useAuth();
   const { household, members } = useHousehold();
+  const { mode, setMode } = useTheme();
 
   return (
     <div className="grid gap-5">
       <SectionHeader title="Settings" subtitle="Household and account details." />
       <Card className="grid gap-3">
-        <h2 className="text-base font-bold text-ink">Household</h2>
+        <h2 className="text-base font-bold text-text">Household</h2>
         <Info label="Name" value={household?.name ?? "Not set"} />
         <Info label="Currency" value={household?.defaultCurrency ?? "ILS"} />
         <Info label="Members" value={members.map((member) => member.displayName).join(", ") || "Only you for now"} />
         <Link href="/app/invite"><Button variant="secondary">View invite code</Button></Link>
       </Card>
       <Card className="grid gap-3">
-        <h2 className="text-base font-bold text-ink">Account</h2>
+        <h2 className="text-base font-bold text-text">Appearance</h2>
+        <label className="grid gap-1.5 text-sm font-medium text-text">
+          <span>Theme</span>
+          <Select value={mode} onChange={(event) => setMode(event.target.value as ThemeMode)}>
+            <option value="system">System</option>
+            <option value="light">Light</option>
+            <option value="dark">Dark</option>
+          </Select>
+        </label>
+      </Card>
+      <Card className="grid gap-3">
+        <h2 className="text-base font-bold text-text">Account</h2>
         <Info label="Signed in as" value={appUser ? `${appUser.displayName} · ${appUser.email}` : "Loading"} />
         <Button variant="danger" onClick={() => void signOutUser()}>Sign out</Button>
       </Card>
@@ -32,9 +46,9 @@ export default function SettingsPage() {
 
 function Info({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-md bg-mist p-3">
-      <p className="text-xs font-bold uppercase tracking-wide text-sage">{label}</p>
-      <p className="mt-1 text-sm font-semibold text-ink">{value}</p>
+    <div className="rounded-md bg-surface-muted p-3">
+      <p className="text-xs font-bold uppercase tracking-wide text-primary">{label}</p>
+      <p className="mt-1 text-sm font-semibold text-text">{value}</p>
     </div>
   );
 }

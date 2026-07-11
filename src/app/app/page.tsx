@@ -9,6 +9,7 @@ import { RecurringBillsSummary } from "@/components/recurring-bills-panel";
 import { Button } from "@/components/ui/button";
 import { Card, SectionHeader } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { EmptyState } from "@/components/ui/empty-state";
 import { useAuth } from "@/hooks/useAuth";
 import { useExpenses } from "@/hooks/useExpenses";
 import { useHousehold } from "@/hooks/useHousehold";
@@ -48,9 +49,9 @@ export default function DashboardPage() {
       <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
         <BalanceCard balanceMinor={myBalance} />
         <Card>
-          <p className="text-sm font-semibold text-ink/60">Shared spending this month</p>
-          <p className="mt-2 text-3xl font-bold text-ink">{formatMoney(monthTotal)}</p>
-          <p className="mt-2 text-sm text-ink/55">{activeExpenses.length} active expenses</p>
+          <p className="text-sm font-semibold text-text-muted">This month in {household?.name ?? "your household"}</p>
+          <p className="mt-2 text-3xl font-bold text-text">{formatMoney(monthTotal)}</p>
+          <p className="mt-2 text-sm text-text-muted">{activeExpenses.length} active expenses</p>
         </Card>
       </div>
       <div className="grid gap-3 sm:grid-cols-3">
@@ -70,7 +71,11 @@ export default function DashboardPage() {
           {activeExpenses.slice(0, 5).length ? (
             activeExpenses.slice(0, 5).map((expense) => <ExpenseCard key={expense.id} expense={expense} members={members} />)
           ) : (
-            <Card className="text-sm text-ink/60">No expenses yet. Add the first shared cost when you are ready.</Card>
+            <EmptyState
+              title="No expenses yet"
+              message="Add the first shared cost when you are ready."
+              action={<Link href="/app/expenses/new"><Button>Add expense</Button></Link>}
+            />
           )}
         </section>
         <div className="grid content-start gap-5">
@@ -85,8 +90,9 @@ export default function DashboardPage() {
                   <Card key={settlement.id} className="p-3">
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <p className="text-sm font-bold text-ink">{from} paid {to}</p>
-                        <p className="mt-1 text-sm text-ink/60">{formatMoney(settlement.amountMinor)} - {formatDate(settlement.date)}</p>
+                        <p className="text-sm font-bold text-text">{from} paid {to}</p>
+                        <p className="mt-1 text-sm text-text-muted">{formatMoney(settlement.amountMinor)} - {formatDate(settlement.date)}</p>
+                        {settlement.note ? <p className="mt-1 text-xs text-text-muted/80">{settlement.note}</p> : null}
                       </div>
                       <Button variant="ghost" className="h-9 px-2" onClick={() => setSettlementToDelete(settlement)} aria-label="Delete settlement">
                         <Trash2 className="h-4 w-4" />
@@ -96,7 +102,7 @@ export default function DashboardPage() {
                 );
               })
             ) : (
-              <Card className="text-sm text-ink/60">No settlement payments recorded.</Card>
+              <EmptyState title="No settlements yet" message="When someone pays the other back, it will show here." />
             )}
           </section>
         </div>

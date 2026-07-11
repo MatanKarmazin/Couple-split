@@ -1,18 +1,23 @@
 import type { Config } from "tailwindcss";
 
 const config: Config = {
+  darkMode: "class",
   content: ["./src/**/*.{ts,tsx}"],
   theme: {
     extend: {
       colors: {
-        ink: "#1f2933",
-        sage: "#507568",
-        coral: "#d96f5d",
-        honey: "#f0b84f",
-        mist: "#eef5f2"
+        background: "hsl(var(--background) / <alpha-value>)",
+        surface: "hsl(var(--surface) / <alpha-value>)",
+        "surface-muted": "hsl(var(--surface-muted) / <alpha-value>)",
+        text: "hsl(var(--text) / <alpha-value>)",
+        "text-muted": "hsl(var(--text-muted) / <alpha-value>)",
+        primary: "hsl(var(--primary) / <alpha-value>)",
+        accent: "hsl(var(--accent) / <alpha-value>)",
+        danger: "hsl(var(--danger) / <alpha-value>)",
+        border: "hsl(var(--border) / <alpha-value>)"
       },
       boxShadow: {
-        soft: "0 18px 50px rgba(31, 41, 51, 0.08)"
+        soft: "0 18px 50px hsl(var(--shadow) / 0.16)"
       }
     }
   },

@@ -7,11 +7,12 @@ import { ExpenseCard } from "@/components/expenses/expense-card";
 import { RecurringBillsPanel } from "@/components/recurring-bills-panel";
 import { Button } from "@/components/ui/button";
 import { Card, SectionHeader } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Input, Select } from "@/components/ui/input";
 import { useExpenses } from "@/hooks/useExpenses";
 import { useHousehold } from "@/hooks/useHousehold";
 import { categories } from "@/lib/validators";
-import { toDate } from "@/lib/dates";
+import { formatDate, toDate } from "@/lib/dates";
 
 export default function ExpensesPage() {
   const { household, members } = useHousehold();
@@ -34,11 +35,24 @@ export default function ExpensesPage() {
     });
   }, [activeExpenses, category, month, payer, search]);
 
+  const groupedExpenses = useMemo(() => {
+    return filtered.reduce<Array<{ title: string; expenses: typeof filtered }>>((groups, expense) => {
+      const title = formatDate(expense.date, "MMMM yyyy");
+      const group = groups.find((item) => item.title === title);
+      if (group) {
+        group.expenses.push(expense);
+      } else {
+        groups.push({ title, expenses: [expense] });
+      }
+      return groups;
+    }, []);
+  }, [filtered]);
+
   return (
     <div className="grid gap-5">
       <SectionHeader
         title="Expenses"
-        subtitle={`${filtered.length} shown`}
+        subtitle={`${household?.name ?? "Household"} - ${filtered.length} shown`}
         action={<Link href="/app/expenses/new"><Button><Plus className="h-4 w-4" />Add</Button></Link>}
       />
       <RecurringBillsPanel />
@@ -55,10 +69,19 @@ export default function ExpensesPage() {
         <Input type="month" value={month} onChange={(event) => setMonth(event.target.value)} />
       </Card>
       <div className="grid gap-3">
-        {filtered.length ? (
-          filtered.map((expense) => <ExpenseCard key={expense.id} expense={expense} members={members} />)
+        {groupedExpenses.length ? (
+          groupedExpenses.map((group) => (
+            <section key={group.title} className="grid gap-3">
+              <h2 className="text-sm font-bold text-text-muted">{group.title}</h2>
+              {group.expenses.map((expense) => <ExpenseCard key={expense.id} expense={expense} members={members} />)}
+            </section>
+          ))
         ) : (
-          <Card className="text-sm text-ink/60">No expenses match these filters.</Card>
+          <EmptyState
+            title={activeExpenses.length ? "No expenses match these filters" : "No expenses yet"}
+            message={activeExpenses.length ? "Try a different search, category, payer, or month." : "Add the first shared cost when you are ready."}
+            action={!activeExpenses.length ? <Link href="/app/expenses/new"><Button>Add expense</Button></Link> : null}
+          />
         )}
       </div>
     </div>

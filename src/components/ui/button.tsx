@@ -13,10 +13,10 @@ export function Button({ className, variant = "primary", type = "button", ...pro
       type={type}
       className={cn(
         "focus-ring inline-flex h-11 items-center justify-center gap-2 rounded-md px-4 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50",
-        variant === "primary" && "bg-sage text-white shadow-soft hover:bg-sage/90",
-        variant === "secondary" && "border border-sage/20 bg-white text-ink hover:bg-mist",
-        variant === "ghost" && "bg-transparent text-ink hover:bg-mist",
-        variant === "danger" && "bg-coral text-white hover:bg-coral/90",
+        variant === "primary" && "bg-primary text-white shadow-soft hover:bg-primary/90 dark:text-background",
+        variant === "secondary" && "border border-border bg-surface text-text hover:bg-surface-muted",
+        variant === "ghost" && "bg-transparent text-text hover:bg-surface-muted",
+        variant === "danger" && "bg-danger text-white hover:bg-danger/90",
         className
       )}
       {...props}

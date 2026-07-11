@@ -1,6 +1,6 @@
 "use client";
 
-import { Copy } from "lucide-react";
+import { Copy, Share2 } from "lucide-react";
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, SectionHeader } from "@/components/ui/card";
@@ -25,20 +25,43 @@ export default function InvitePage() {
     showToast({ title: "Invite code copied" });
   }
 
+  async function shareCode() {
+    if (!household) return;
+    const text = `Join ${household.name} on CoupleSplit with code ${household.inviteCode}`;
+    if (navigator.share) {
+      await navigator.share({ title: "CoupleSplit invite", text });
+      return;
+    }
+
+    await navigator.clipboard.writeText(text);
+    showToast({ title: "Invite copied" });
+  }
+
   return (
     <div className="grid gap-5">
       <SectionHeader title="Invite code" subtitle={partner ? `${partner.displayName} has joined.` : "Share this code with your partner."} />
       <Card className="grid gap-4">
-        <p className="text-sm font-semibold text-ink/60">Household</p>
-        <p className="text-xl font-bold text-ink">{household?.name ?? "Loading..."}</p>
-        <div className="rounded-lg bg-mist p-5 text-center">
-          <p className="text-xs font-bold uppercase tracking-[0.2em] text-sage">Code</p>
-          <p className="mt-2 text-4xl font-bold text-ink">{household?.inviteCode ?? "------"}</p>
+        <div>
+          <p className="text-sm font-semibold text-text-muted">Household</p>
+          <p className="text-xl font-bold text-text">{household?.name ?? "Loading..."}</p>
         </div>
-        <Button onClick={copyCode} disabled={!household}>
-          <Copy className="h-4 w-4" />
-          Copy code
-        </Button>
+        <div className="rounded-lg bg-surface-muted p-5 text-center">
+          <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary">Code</p>
+          <p className="mt-2 text-4xl font-bold text-text">{household?.inviteCode ?? "------"}</p>
+          <p className="mt-3 text-sm font-semibold text-text-muted">
+            {partner ? "Your partner is already connected." : "Waiting for your partner to join."}
+          </p>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Button onClick={copyCode} disabled={!household}>
+            <Copy className="h-4 w-4" />
+            Copy code
+          </Button>
+          <Button variant="secondary" onClick={shareCode} disabled={!household}>
+            <Share2 className="h-4 w-4" />
+            Share invite
+          </Button>
+        </div>
       </Card>
     </div>
   );

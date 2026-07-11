@@ -31,11 +31,11 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       {children}
       <div className="fixed bottom-4 left-4 right-4 z-50 grid gap-2 sm:left-auto sm:w-96">
         {toasts.map((toast) => (
-          <div key={toast.id} className="rounded-lg border border-sage/15 bg-white p-3 shadow-soft">
+          <div key={toast.id} className="rounded-lg border border-border bg-surface p-3 shadow-soft">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-sm font-bold text-ink">{toast.title}</p>
-                {toast.message ? <p className="mt-1 text-sm text-ink/60">{toast.message}</p> : null}
+                <p className="text-sm font-bold text-text">{toast.title}</p>
+                {toast.message ? <p className="mt-1 text-sm text-text-muted">{toast.message}</p> : null}
               </div>
               <Button variant="ghost" className="h-8 w-8 px-0" onClick={() => dismiss(toast.id)} aria-label="Dismiss">
                 <X className="h-4 w-4" />

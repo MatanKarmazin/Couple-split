@@ -63,7 +63,7 @@ export default function OnboardingPage() {
       <SectionHeader title="Set up your shared space" subtitle="Create a household, or join one with an invite code." />
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
-          <h2 className="text-base font-bold text-ink">Create household</h2>
+          <h2 className="text-base font-bold text-text">Create household</h2>
           <form className="mt-4 grid gap-4" onSubmit={createForm.handleSubmit(create)}>
             <Field label="Household name" error={createForm.formState.errors.name?.message}>
               <Input {...createForm.register("name")} />
@@ -72,7 +72,7 @@ export default function OnboardingPage() {
           </form>
         </Card>
         <Card>
-          <h2 className="text-base font-bold text-ink">Join household</h2>
+          <h2 className="text-base font-bold text-text">Join household</h2>
           <form className="mt-4 grid gap-4" onSubmit={joinForm.handleSubmit(join)}>
             <Field label="Invite code" error={joinForm.formState.errors.inviteCode?.message}>
               <Input placeholder="ABCD123" {...joinForm.register("inviteCode")} />

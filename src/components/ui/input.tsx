@@ -9,11 +9,11 @@ type FieldProps = {
 
 export function Field({ label, error, hint, children }: FieldProps & { children: React.ReactNode }) {
   return (
-    <label className="grid gap-1.5 text-sm font-medium text-ink">
+    <label className="grid gap-1.5 text-sm font-medium text-text">
       <span>{label}</span>
       {children}
-      {hint ? <span className="text-xs font-normal text-ink/55">{hint}</span> : null}
-      {error ? <span className="text-xs font-semibold text-coral">{error}</span> : null}
+      {hint ? <span className="text-xs font-normal text-text-muted">{hint}</span> : null}
+      {error ? <span className="text-xs font-semibold text-danger">{error}</span> : null}
     </label>
   );
 }
@@ -22,7 +22,7 @@ export function Input({ className, ...props }: InputHTMLAttributes<HTMLInputElem
   return (
     <input
       className={cn(
-        "focus-ring h-11 rounded-md border border-sage/20 bg-white px-3 text-sm text-ink placeholder:text-ink/35",
+        "focus-ring h-11 rounded-md border border-border bg-surface px-3 text-sm text-text placeholder:text-text-muted/60",
         className
       )}
       {...props}
@@ -34,7 +34,7 @@ export function Select({ className, ...props }: SelectHTMLAttributes<HTMLSelectE
   return (
     <select
       className={cn(
-        "focus-ring h-11 rounded-md border border-sage/20 bg-white px-3 text-sm text-ink",
+        "focus-ring h-11 rounded-md border border-border bg-surface px-3 text-sm text-text",
         className
       )}
       {...props}
@@ -46,7 +46,7 @@ export function Textarea({ className, ...props }: TextareaHTMLAttributes<HTMLTex
   return (
     <textarea
       className={cn(
-        "focus-ring min-h-24 rounded-md border border-sage/20 bg-white px-3 py-2 text-sm text-ink placeholder:text-ink/35",
+        "focus-ring min-h-24 rounded-md border border-border bg-surface px-3 py-2 text-sm text-text placeholder:text-text-muted/60",
         className
       )}
       {...props}
