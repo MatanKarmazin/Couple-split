@@ -101,6 +101,7 @@ export type RecurringBill = {
   paidByUid: string;
   dayOfMonth: number;
   startMonth: string;
+  frequencyMonths?: 1 | 2;
   active: boolean;
   notes?: string;
   createdByUid: string;

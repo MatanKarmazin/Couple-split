@@ -201,6 +201,7 @@ export async function saveRecurringBill(
     paidByUid: values.paidByUid,
     dayOfMonth: values.dayOfMonth,
     startMonth: values.startMonth,
+    frequencyMonths: values.frequencyMonths,
     active: values.active,
     notes: values.notes ?? "",
     updatedAt: serverTimestamp()
@@ -247,7 +248,7 @@ export async function materializeDueRecurringExpenses(
   for (const bill of bills.filter((item) => item.active && !item.deletedAt)) {
     if (!memberUids.includes(bill.paidByUid)) continue;
 
-    for (const month of dueMonths(bill.startMonth, today)) {
+    for (const month of dueMonths(bill.startMonth, today, bill.frequencyMonths ?? 1)) {
       const date = dueDateForMonth(month, bill.dayOfMonth);
       if (date > today) continue;
 
@@ -302,17 +303,18 @@ export async function softDeleteSettlement(householdId: string, settlementId: st
   });
 }
 
-function dueMonths(startMonth: string, today: Date) {
+function dueMonths(startMonth: string, today: Date, frequencyMonths: number) {
   const [startYear, startMonthNumber] = startMonth.split("-").map(Number);
   if (!startYear || !startMonthNumber) return [];
 
   const months: string[] = [];
   const cursor = new Date(startYear, startMonthNumber - 1, 1);
   const end = new Date(today.getFullYear(), today.getMonth(), 1);
+  const increment = frequencyMonths === 2 ? 2 : 1;
 
   while (cursor <= end) {
     months.push(`${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, "0")}`);
-    cursor.setMonth(cursor.getMonth() + 1);
+    cursor.setMonth(cursor.getMonth() + increment);
   }
 
   return months;

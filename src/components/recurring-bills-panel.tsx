@@ -35,6 +35,7 @@ export function RecurringBillsPanel() {
     paidByUid: editingBill?.paidByUid ?? members[0]?.uid ?? "",
     dayOfMonth: editingBill?.dayOfMonth ?? new Date().getDate(),
     startMonth: editingBill?.startMonth ?? currentMonth(),
+    frequencyMonths: editingBill?.frequencyMonths ?? 1,
     active: editingBill?.active ?? true,
     notes: editingBill?.notes ?? ""
   }), [editingBill, members]);
@@ -82,7 +83,7 @@ export function RecurringBillsPanel() {
   }
 
   return (
-    <section className="grid gap-4">
+    <section id="recurring" className="scroll-mt-6 grid gap-4">
       <SectionHeader title="Recurring bills" subtitle="Due bills are created as normal expenses." />
       <div className="grid gap-5 lg:grid-cols-[0.95fr_1.05fr]">
         <Card>
@@ -118,6 +119,14 @@ export function RecurringBillsPanel() {
               <Field label="Start month" error={form.formState.errors.startMonth?.message}>
                 <Input type="month" {...form.register("startMonth")} />
               </Field>
+              <Field label="Repeats" error={form.formState.errors.frequencyMonths?.message}>
+                <Select {...form.register("frequencyMonths")}>
+                  <option value={1}>Monthly</option>
+                  <option value={2}>Every two months</option>
+                </Select>
+              </Field>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
               <label className="flex min-h-11 items-center gap-3 rounded-md border border-sage/15 bg-white px-3 text-sm font-semibold text-ink">
                 <input type="checkbox" {...form.register("active")} />
                 Active
@@ -181,7 +190,7 @@ export function RecurringBillsSummary() {
                   <p className="truncate text-sm font-bold text-ink">{bill.description}</p>
                   <Badge>{bill.active ? "Active" : "Paused"}</Badge>
                 </div>
-                <p className="mt-1 text-xs text-ink/55">Paid by {payer} - next {formatDate(nextDueDate(bill))}</p>
+                <p className="mt-1 text-xs text-ink/55">Paid by {payer} - {frequencyLabel(bill)} - next {formatDate(nextDueDate(bill))}</p>
               </div>
               <p className="shrink-0 text-sm font-bold text-ink">{formatMoney(bill.amountMinor)}</p>
             </div>
@@ -217,7 +226,7 @@ function RecurringBillCard({
             <h2 className="truncate text-sm font-bold text-ink">{bill.description}</h2>
             <Badge>{bill.active ? "Active" : "Paused"}</Badge>
           </div>
-          <p className="mt-1 text-xs text-ink/55">Paid by {payer} - next {formatDate(nextDueDate(bill))}</p>
+          <p className="mt-1 text-xs text-ink/55">Paid by {payer} - {frequencyLabel(bill)} - next {formatDate(nextDueDate(bill))}</p>
         </div>
         <div className="text-right">
           <p className="text-sm font-bold text-ink">{formatMoney(bill.amountMinor)}</p>
@@ -242,6 +251,7 @@ function emptyValues(paidByUid = ""): RecurringBillFormValues {
     paidByUid,
     dayOfMonth: new Date().getDate(),
     startMonth: currentMonth(),
+    frequencyMonths: 1,
     active: true,
     notes: ""
   };
@@ -253,19 +263,27 @@ function currentMonth() {
 }
 
 function nextDueDate(bill: RecurringBill) {
-  const today = new Date();
+  const today = startOfDay(new Date());
   const [startYear, startMonth] = bill.startMonth.split("-").map(Number);
-  const startDate = dueDate(startYear, startMonth - 1, bill.dayOfMonth);
-  let next = dueDate(today.getFullYear(), today.getMonth(), bill.dayOfMonth);
+  let next = dueDate(startYear, startMonth - 1, bill.dayOfMonth);
+  const increment = bill.frequencyMonths === 2 ? 2 : 1;
 
-  if (next < today) {
-    next = dueDate(today.getFullYear(), today.getMonth() + 1, bill.dayOfMonth);
+  while (next < today) {
+    next = dueDate(next.getFullYear(), next.getMonth() + increment, bill.dayOfMonth);
   }
 
-  return startDate > next ? startDate : next;
+  return next;
 }
 
 function dueDate(year: number, monthIndex: number, dayOfMonth: number) {
   const lastDay = new Date(year, monthIndex + 1, 0).getDate();
   return new Date(year, monthIndex, Math.min(dayOfMonth, lastDay));
+}
+
+function startOfDay(date: Date) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+function frequencyLabel(bill: RecurringBill) {
+  return bill.frequencyMonths === 2 ? "Every two months" : "Monthly";
 }

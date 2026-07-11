@@ -72,6 +72,7 @@ export const recurringBillSchema = z.object({
   paidByUid: z.string().min(1, "Choose who pays."),
   dayOfMonth: z.coerce.number().int().min(1, "Use a day from 1 to 31.").max(31, "Use a day from 1 to 31."),
   startMonth: z.string().regex(/^\d{4}-\d{2}$/, "Choose a start month."),
+  frequencyMonths: z.coerce.number().refine((value) => value === 1 || value === 2, "Choose a repeat schedule."),
   active: z.boolean(),
   notes: z.string().max(240).optional()
 });

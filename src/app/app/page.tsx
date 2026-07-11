@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { Plus, Trash2, WalletCards } from "lucide-react";
+import { CalendarClock, Plus, Trash2, WalletCards } from "lucide-react";
 import { BalanceCard } from "@/components/dashboard/balance-card";
 import { ExpenseCard } from "@/components/expenses/expense-card";
 import { RecurringBillsSummary } from "@/components/recurring-bills-panel";
@@ -53,9 +53,12 @@ export default function DashboardPage() {
           <p className="mt-2 text-sm text-ink/55">{activeExpenses.length} active expenses</p>
         </Card>
       </div>
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid gap-3 sm:grid-cols-3">
         <Link href="/app/expenses/new">
           <Button className="w-full"><Plus className="h-4 w-4" />Add expense</Button>
+        </Link>
+        <Link href="/app/expenses#recurring">
+          <Button className="w-full" variant="secondary"><CalendarClock className="h-4 w-4" />Add recurring</Button>
         </Link>
         <Link href="/app/settle-up">
           <Button className="w-full" variant="secondary"><WalletCards className="h-4 w-4" />Settle up</Button>

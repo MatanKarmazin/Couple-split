@@ -106,6 +106,10 @@ service cloud.firestore {
         && request.resource.data.dayOfMonth >= 1
         && request.resource.data.dayOfMonth <= 31
         && request.resource.data.startMonth is string
+        && (
+          !request.resource.data.keys().hasAny(["frequencyMonths"])
+          || request.resource.data.frequencyMonths in [1, 2]
+        )
         && request.resource.data.active is bool;
     }
 
