@@ -13,7 +13,13 @@ import {
   type Unsubscribe
 } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
-import { calculateEqualShares, parseMoneyToMinor } from "@/lib/money";
+import {
+  calculateAmountShares,
+  calculateEqualShares,
+  calculateOnePersonShares,
+  calculatePercentageShares,
+  parseMoneyToMinor
+} from "@/lib/money";
 import { generateInviteCode } from "@/lib/utils";
 import type { AppUser, Expense, Household, HouseholdMember, RecurringBill, Settlement } from "@/types";
 import type { ExpenseFormValues, RecurringBillFormValues, SettlementFormValues } from "@/lib/validators";
@@ -150,7 +156,7 @@ export async function saveExpense(
   expenseId?: string
 ) {
   const amountMinor = parseMoneyToMinor(values.amount);
-  const shares = calculateEqualShares(amountMinor, values.participants);
+  const shares = calculateExpenseShares(amountMinor, values);
   const payload = {
     householdId,
     description: values.description,
@@ -158,7 +164,7 @@ export async function saveExpense(
     currency: "ILS",
     category: values.category,
     paidByUid: values.paidByUid,
-    splitType: "equal",
+    splitType: values.splitType,
     participants: values.participants,
     shares,
     date: values.date,
@@ -177,6 +183,22 @@ export async function saveExpense(
     createdAt: serverTimestamp()
   });
   return expenseRef.id;
+}
+
+function calculateExpenseShares(amountMinor: number, values: ExpenseFormValues) {
+  if (values.splitType === "one_person") {
+    return calculateOnePersonShares(amountMinor, values.participants, values.owedByUid ?? "");
+  }
+
+  if (values.splitType === "amounts") {
+    return calculateAmountShares(amountMinor, values.participants, values.shareAmounts);
+  }
+
+  if (values.splitType === "percentage") {
+    return calculatePercentageShares(amountMinor, values.participants, values.sharePercentages);
+  }
+
+  return calculateEqualShares(amountMinor, values.participants);
 }
 
 export async function softDeleteExpense(householdId: string, expenseId: string) {

@@ -12,7 +12,7 @@ export type Category =
   | "Health"
   | "Other";
 
-export type SplitType = "equal" | "exact" | "percentage" | "shares";
+export type SplitType = "equal" | "one_person" | "amounts" | "percentage";
 
 export type MemberRole = "owner" | "member";
 

@@ -54,6 +54,9 @@ export default function ExpenseDetailPage() {
   }
 
   const payer = members.find((member) => member.uid === expense.paidByUid)?.displayName ?? "Someone";
+  const shareSummary = members
+    .map((member) => `${member.displayName}: ${formatMoney(expense.shares[member.uid] ?? 0)}`)
+    .join(", ");
 
   return (
     <div className="grid gap-5">
@@ -79,8 +82,8 @@ export default function ExpenseDetailPage() {
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             <Info label="Paid by" value={payer} />
-            <Info label="Split type" value="Equal" />
-            <Info label="Participants" value={expense.participants.map((uid) => members.find((member) => member.uid === uid)?.displayName ?? uid).join(", ")} />
+            <Info label="Split type" value={splitLabel(expense.splitType)} />
+            <Info label="Shares" value={shareSummary} />
             <Info label="Notes" value={expense.notes || "None"} />
           </div>
         </Card>
@@ -95,6 +98,13 @@ export default function ExpenseDetailPage() {
       />
     </div>
   );
+}
+
+function splitLabel(splitType: string) {
+  if (splitType === "one_person") return "One person owes all";
+  if (splitType === "amounts") return "Custom amounts";
+  if (splitType === "percentage") return "Custom percentage";
+  return "Equal";
 }
 
 function Info({ label, value }: { label: string; value: string }) {

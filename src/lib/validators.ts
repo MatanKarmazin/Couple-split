@@ -15,7 +15,7 @@ export const categories = [
   "Other"
 ] as const satisfies readonly Category[];
 
-export const splitTypes = ["equal", "exact", "percentage", "shares"] as const satisfies readonly SplitType[];
+export const splitTypes = ["equal", "one_person", "amounts", "percentage"] as const satisfies readonly SplitType[];
 
 export const householdSchema = z.object({
   name: z.string().trim().min(2, "Name should be at least 2 characters.").max(48)
@@ -39,6 +39,9 @@ export const expenseSchema = z.object({
   paidByUid: z.string().min(1, "Choose who paid."),
   splitType: z.enum(splitTypes),
   participants: z.array(z.string()).min(1, "Choose at least one participant."),
+  owedByUid: z.string().optional(),
+  shareAmounts: z.record(z.string()).optional(),
+  sharePercentages: z.record(z.string()).optional(),
   notes: z.string().max(240).optional()
 });
 

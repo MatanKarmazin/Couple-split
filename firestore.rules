@@ -60,6 +60,19 @@ service cloud.firestore {
         && householdData(householdId).memberIds.hasAll(request.resource.data.participants);
     }
 
+    function validExpenseShares(householdId) {
+      return request.resource.data.shares is map
+        && request.resource.data.shares.keys().size() == householdData(householdId).memberIds.size()
+        && request.resource.data.shares.keys().hasAll(householdData(householdId).memberIds)
+        && request.resource.data.shares[householdData(householdId).memberIds[0]] is int
+        && request.resource.data.shares[householdData(householdId).memberIds[1]] is int
+        && request.resource.data.shares[householdData(householdId).memberIds[0]] >= 0
+        && request.resource.data.shares[householdData(householdId).memberIds[1]] >= 0
+        && request.resource.data.shares[householdData(householdId).memberIds[0]]
+          + request.resource.data.shares[householdData(householdId).memberIds[1]]
+          == request.resource.data.amountMinor;
+    }
+
     function validExpenseCreate(householdId) {
       return isHouseholdMember(householdId)
         && request.resource.data.householdId == householdId
@@ -70,8 +83,9 @@ service cloud.firestore {
         && request.resource.data.description is string
         && request.resource.data.category is string
         && request.resource.data.paidByUid in householdData(householdId).memberIds
-        && request.resource.data.splitType == "equal"
-        && validExpenseParticipants(householdId);
+        && request.resource.data.splitType in ["equal", "one_person", "amounts", "percentage"]
+        && validExpenseParticipants(householdId)
+        && validExpenseShares(householdId);
     }
 
     function validSettlementCreate(householdId) {
@@ -161,8 +175,9 @@ service cloud.firestore {
         allow update: if isHouseholdMember(householdId)
           && request.resource.data.createdByUid == resource.data.createdByUid
           && request.resource.data.householdId == householdId
-          && request.resource.data.splitType == "equal"
-          && validExpenseParticipants(householdId);
+          && request.resource.data.splitType in ["equal", "one_person", "amounts", "percentage"]
+          && validExpenseParticipants(householdId)
+          && validExpenseShares(householdId);
         allow delete: if false;
       }
 
