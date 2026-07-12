@@ -8,22 +8,24 @@ import { Button } from "@/components/ui/button";
 import { signOutUser } from "@/lib/firebase/auth";
 import { useRequireAuth } from "@/hooks/useAuth";
 import { useHousehold } from "@/hooks/useHousehold";
+import { useLanguage } from "@/hooks/useLanguage";
 import { useRecurringBills } from "@/hooks/useRecurringBills";
 import { cn } from "@/lib/utils";
 
 const navItems = [
-  { href: "/app", label: "Home", icon: Home },
-  { href: "/app/expenses", label: "Expenses", icon: ReceiptText },
-  { href: "/app/expenses/new", label: "Add", icon: Plus },
-  { href: "/app/settle-up", label: "Settle", icon: WalletCards },
-  { href: "/app/settings", label: "Settings", icon: Settings }
-];
+  { href: "/app", labelKey: "nav.home", icon: Home },
+  { href: "/app/expenses", labelKey: "nav.expenses", icon: ReceiptText },
+  { href: "/app/expenses/new", labelKey: "nav.add", icon: Plus },
+  { href: "/app/settle-up", labelKey: "nav.settle", icon: WalletCards },
+  { href: "/app/settings", labelKey: "nav.settings", icon: Settings }
+] as const;
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const { appUser, loading } = useRequireAuth();
   const { household, members, loading: householdLoading } = useHousehold();
+  const { t } = useLanguage();
   const [quickAddOpen, setQuickAddOpen] = useState(false);
   const needsOnboarding = !household && !householdLoading && pathname !== "/app/onboarding";
   useRecurringBills(household?.id, members);
@@ -35,19 +37,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }, [needsOnboarding, router]);
 
   if (loading || !appUser) {
-    return <div className="grid min-h-screen place-items-center text-sm font-semibold text-text-muted">Loading CoupleSplit...</div>;
+    return <div className="grid min-h-screen place-items-center text-sm font-semibold text-text-muted">{t("common.loadingApp")}</div>;
   }
 
   return (
     <div className="min-h-screen pb-20 md:pb-0">
-      <aside className="fixed left-0 top-0 hidden h-screen w-64 border-r border-border bg-surface/85 p-4 backdrop-blur md:block">
+      <aside className="fixed left-0 top-0 hidden h-screen w-64 border-r border-border bg-surface/85 p-4 backdrop-blur rtl:left-auto rtl:right-0 rtl:border-l rtl:border-r-0 md:block">
         <Link href="/app" className="mb-8 flex items-center gap-3">
           <div className="grid h-10 w-10 place-items-center rounded-lg bg-primary text-white dark:text-background">
             <CircleDollarSign className="h-5 w-5" />
           </div>
           <div>
             <p className="text-base font-bold text-text">CoupleSplit</p>
-            <p className="text-xs text-text-muted">{household?.name ?? "Household"}</p>
+            <p className="text-xs text-text-muted">{household?.name ?? t("common.household")}</p>
           </div>
         </Link>
         <nav className="grid gap-1">
@@ -64,7 +66,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 )}
               >
                 <Icon className="h-4 w-4" />
-                {item.label}
+                {t(item.labelKey)}
               </Link>
             );
           })}
@@ -84,24 +86,24 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
           <Button variant="secondary" className="w-full" onClick={() => void signOutUser()}>
             <LogOut className="h-4 w-4" />
-            Sign out
+            {t("nav.signOut")}
           </Button>
         </div>
       </aside>
-      <main className="mx-auto w-full max-w-6xl px-4 py-5 md:ml-64 md:px-8 md:py-8">{children}</main>
+      <main className="mx-auto w-full max-w-6xl px-4 py-5 md:ml-64 md:px-8 md:py-8 rtl:md:ml-auto rtl:md:mr-64">{children}</main>
       {quickAddOpen ? (
         <div className="fixed bottom-20 left-4 right-4 z-40 grid gap-2 rounded-lg border border-border bg-surface p-3 shadow-soft md:hidden">
           <Link href="/app/expenses/new" onClick={() => setQuickAddOpen(false)} className="flex items-center gap-3 rounded-md px-3 py-3 text-sm font-bold text-text hover:bg-surface-muted">
             <Plus className="h-4 w-4 text-primary" />
-            Add expense
+            {t("quick.addExpense")}
           </Link>
           <Link href="/app/expenses#recurring" onClick={() => setQuickAddOpen(false)} className="flex items-center gap-3 rounded-md px-3 py-3 text-sm font-bold text-text hover:bg-surface-muted">
             <CalendarClock className="h-4 w-4 text-primary" />
-            Add recurring bill
+            {t("quick.addRecurring")}
           </Link>
           <Link href="/app/settle-up" onClick={() => setQuickAddOpen(false)} className="flex items-center gap-3 rounded-md px-3 py-3 text-sm font-bold text-text hover:bg-surface-muted">
             <WalletCards className="h-4 w-4 text-primary" />
-            Settle up
+            {t("quick.settleUp")}
           </Link>
         </div>
       ) : null}
@@ -109,7 +111,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         type="button"
         className="fixed bottom-16 left-1/2 z-50 grid h-14 w-14 -translate-x-1/2 place-items-center rounded-full bg-primary text-white shadow-soft dark:text-background md:hidden"
         onClick={() => setQuickAddOpen((value) => !value)}
-        aria-label={quickAddOpen ? "Close quick actions" : "Open quick actions"}
+        aria-label={quickAddOpen ? t("common.cancel") : t("nav.add")}
       >
         {quickAddOpen ? <X className="h-6 w-6" /> : <Plus className="h-6 w-6" />}
       </button>
@@ -124,7 +126,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               className={cn("grid place-items-center gap-1 px-1 py-2 text-[11px] font-semibold text-text-muted", active && "text-primary")}
             >
               <Icon className="h-5 w-5" />
-              {item.label}
+              {t(item.labelKey)}
             </Link>
           );
         })}

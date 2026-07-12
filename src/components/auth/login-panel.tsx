@@ -6,10 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { signInWithGoogle } from "@/lib/firebase/auth";
 import { useToast } from "@/components/ui/toast";
+import { useLanguage } from "@/hooks/useLanguage";
 
 export function LoginPanel() {
   const router = useRouter();
   const { showToast } = useToast();
+  const { t } = useLanguage();
 
   async function handleLogin() {
     try {
@@ -17,8 +19,8 @@ export function LoginPanel() {
       router.replace("/app");
     } catch (error) {
       showToast({
-        title: "Sign in failed",
-        message: error instanceof Error ? error.message : "Please try again.",
+        title: t("login.failed"),
+        message: error instanceof Error ? error.message : t("common.tryAgain"),
         tone: "error"
       });
     }
@@ -32,17 +34,17 @@ export function LoginPanel() {
             <HeartHandshake className="h-6 w-6" />
           </div>
           <div>
-            <p className="text-sm font-semibold text-primary">CoupleSplit</p>
-            <h1 className="text-3xl font-bold text-text">Shared money, calmer evenings.</h1>
+            <p className="text-sm font-semibold text-primary">{t("login.kicker")}</p>
+            <h1 className="text-3xl font-bold text-text">{t("login.title")}</h1>
           </div>
         </div>
         <Card className="p-6">
           <p className="text-sm leading-6 text-text-muted">
-            Sign in to keep a private household ledger for shared expenses, balances, and settle-up payments.
+            {t("login.body")}
           </p>
           <Button className="mt-6 w-full" onClick={handleLogin}>
             <Chrome className="h-4 w-4" />
-            Continue with Google
+            {t("login.google")}
           </Button>
         </Card>
       </div>

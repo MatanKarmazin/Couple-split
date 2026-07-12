@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useLanguage } from "@/hooks/useLanguage";
 
 type Toast = { id: string; title: string; message?: string; tone?: "success" | "error" };
 type ToastContextValue = {
@@ -13,6 +14,7 @@ const ToastContext = createContext<ToastContextValue | null>(null);
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
+  const { t } = useLanguage();
 
   const dismiss = useCallback((id: string) => {
     setToasts((items) => items.filter((toast) => toast.id !== id));
@@ -37,7 +39,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
                 <p className="text-sm font-bold text-text">{toast.title}</p>
                 {toast.message ? <p className="mt-1 text-sm text-text-muted">{toast.message}</p> : null}
               </div>
-              <Button variant="ghost" className="h-8 w-8 px-0" onClick={() => dismiss(toast.id)} aria-label="Dismiss">
+              <Button variant="ghost" className="h-8 w-8 px-0" onClick={() => dismiss(toast.id)} aria-label={t("common.cancel")}>
                 <X className="h-4 w-4" />
               </Button>
             </div>

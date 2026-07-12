@@ -10,8 +10,10 @@ import { Card, SectionHeader } from "@/components/ui/card";
 import { useAuth } from "@/hooks/useAuth";
 import { useExpenses } from "@/hooks/useExpenses";
 import { useHousehold } from "@/hooks/useHousehold";
-import { formatDate } from "@/lib/dates";
+import { useLanguage } from "@/hooks/useLanguage";
+import { formatDateLocale } from "@/lib/dates";
 import { softDeleteExpense, saveExpense } from "@/lib/firebase/firestore";
+import { categoryLabel, splitTypeLabel } from "@/lib/i18n";
 import { formatMoney } from "@/lib/money";
 import type { ExpenseFormValues } from "@/lib/validators";
 import { useToast } from "@/components/ui/toast";
@@ -21,6 +23,7 @@ export default function ExpenseDetailPage() {
   const router = useRouter();
   const { appUser } = useAuth();
   const { household, members } = useHousehold();
+  const { language, locale, t } = useLanguage();
   const { activeExpenses } = useExpenses(household?.id);
   const { showToast } = useToast();
   const [editing, setEditing] = useState(false);
@@ -33,10 +36,10 @@ export default function ExpenseDetailPage() {
     setSubmitting(true);
     try {
       await saveExpense(household.id, appUser.uid, values, expense.id);
-      showToast({ title: "Expense updated" });
+      showToast({ title: t("expenses.updated") });
       setEditing(false);
     } catch (error) {
-      showToast({ title: "Could not update", message: error instanceof Error ? error.message : "Try again.", tone: "error" });
+      showToast({ title: t("expenses.couldNotUpdate"), message: error instanceof Error ? error.message : t("common.tryAgain"), tone: "error" });
     } finally {
       setSubmitting(false);
     }
@@ -45,28 +48,28 @@ export default function ExpenseDetailPage() {
   async function remove() {
     if (!household || !expense) return;
     await softDeleteExpense(household.id, expense.id);
-    showToast({ title: "Expense deleted" });
+    showToast({ title: t("expenses.deleted") });
     router.push("/app/expenses");
   }
 
   if (!expense) {
-    return <Card className="text-sm text-text-muted">Expense not found or still loading.</Card>;
+    return <Card className="text-sm text-text-muted">{t("expenses.notFound")}</Card>;
   }
 
-  const payer = members.find((member) => member.uid === expense.paidByUid)?.displayName ?? "Someone";
+  const payer = members.find((member) => member.uid === expense.paidByUid)?.displayName ?? t("common.someone");
   const shareSummary = members
-    .map((member) => `${member.displayName}: ${formatMoney(expense.shares[member.uid] ?? 0)}`)
+    .map((member) => `${member.displayName}: ${formatMoney(expense.shares[member.uid] ?? 0, "ILS", locale)}`)
     .join(", ");
 
   return (
     <div className="grid gap-5">
       <SectionHeader
         title={expense.description}
-        subtitle={`${expense.category} · ${formatDate(expense.date)}`}
+        subtitle={`${categoryLabel(language, expense.category)} · ${formatDateLocale(expense.date, locale)}`}
         action={
           <div className="flex gap-2">
-            <Button variant="secondary" onClick={() => setEditing((value) => !value)}><Pencil className="h-4 w-4" />Edit</Button>
-            <Button variant="danger" onClick={() => setConfirmOpen(true)}><Trash2 className="h-4 w-4" />Delete</Button>
+            <Button variant="secondary" onClick={() => setEditing((value) => !value)}><Pencil className="h-4 w-4" />{t("common.edit")}</Button>
+            <Button variant="danger" onClick={() => setConfirmOpen(true)}><Trash2 className="h-4 w-4" />{t("common.delete")}</Button>
           </div>
         }
       />
@@ -77,34 +80,27 @@ export default function ExpenseDetailPage() {
       ) : (
         <Card className="grid gap-4">
           <div>
-            <p className="text-sm font-semibold text-text-muted">Amount</p>
-            <p className="mt-1 text-3xl font-bold text-text">{formatMoney(expense.amountMinor)}</p>
+            <p className="text-sm font-semibold text-text-muted">{t("common.amount")}</p>
+            <p className="mt-1 text-3xl font-bold text-text">{formatMoney(expense.amountMinor, "ILS", locale)}</p>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
-            <Info label="Paid by" value={payer} />
-            <Info label="Split type" value={splitLabel(expense.splitType)} />
-            <Info label="Shares" value={shareSummary} />
-            <Info label="Notes" value={expense.notes || "None"} />
+            <Info label={t("expenses.paidBy")} value={payer} />
+            <Info label={t("expenses.splitType")} value={splitTypeLabel(language, expense.splitType)} />
+            <Info label={t("expenses.shares")} value={shareSummary} />
+            <Info label={t("common.notes")} value={expense.notes || t("common.none")} />
           </div>
         </Card>
       )}
       <ConfirmDialog
         open={confirmOpen}
-        title="Delete this expense?"
-        message="This will soft delete the expense and remove it from balance calculations."
-        confirmLabel="Delete"
+        title={t("expenses.deleteTitle")}
+        message={t("expenses.deleteMessage")}
+        confirmLabel={t("common.delete")}
         onCancel={() => setConfirmOpen(false)}
         onConfirm={() => void remove()}
       />
     </div>
   );
-}
-
-function splitLabel(splitType: string) {
-  if (splitType === "one_person") return "One person owes all";
-  if (splitType === "amounts") return "Custom amounts";
-  if (splitType === "percentage") return "Custom percentage";
-  return "Equal";
 }
 
 function Info({ label, value }: { label: string; value: string }) {

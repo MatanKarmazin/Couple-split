@@ -11,11 +11,14 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Input, Select } from "@/components/ui/input";
 import { useExpenses } from "@/hooks/useExpenses";
 import { useHousehold } from "@/hooks/useHousehold";
+import { useLanguage } from "@/hooks/useLanguage";
 import { categories } from "@/lib/validators";
-import { formatDate, toDate } from "@/lib/dates";
+import { formatDateLocale, toDate } from "@/lib/dates";
+import { categoryLabel } from "@/lib/i18n";
 
 export default function ExpensesPage() {
   const { household, members } = useHousehold();
+  const { language, locale, t } = useLanguage();
   const { activeExpenses } = useExpenses(household?.id);
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("all");
@@ -37,7 +40,7 @@ export default function ExpensesPage() {
 
   const groupedExpenses = useMemo(() => {
     return filtered.reduce<Array<{ title: string; expenses: typeof filtered }>>((groups, expense) => {
-      const title = formatDate(expense.date, "MMMM yyyy");
+      const title = formatDateLocale(expense.date, locale, "monthYear");
       const group = groups.find((item) => item.title === title);
       if (group) {
         group.expenses.push(expense);
@@ -46,24 +49,24 @@ export default function ExpensesPage() {
       }
       return groups;
     }, []);
-  }, [filtered]);
+  }, [filtered, locale]);
 
   return (
     <div className="grid gap-5">
       <SectionHeader
-        title="Expenses"
-        subtitle={`${household?.name ?? "Household"} - ${filtered.length} shown`}
-        action={<Link href="/app/expenses/new"><Button><Plus className="h-4 w-4" />Add</Button></Link>}
+        title={t("expenses.title")}
+        subtitle={t("expenses.subtitle", { household: household?.name ?? t("common.household"), count: filtered.length })}
+        action={<Link href="/app/expenses/new"><Button><Plus className="h-4 w-4" />{t("nav.add")}</Button></Link>}
       />
       <RecurringBillsPanel />
       <Card className="grid gap-3 md:grid-cols-4">
-        <Input placeholder="Search" value={search} onChange={(event) => setSearch(event.target.value)} />
+        <Input placeholder={t("expenses.search")} value={search} onChange={(event) => setSearch(event.target.value)} />
         <Select value={category} onChange={(event) => setCategory(event.target.value)}>
-          <option value="all">All categories</option>
-          {categories.map((item) => <option key={item}>{item}</option>)}
+          <option value="all">{t("expenses.allCategories")}</option>
+          {categories.map((item) => <option key={item} value={item}>{categoryLabel(language, item)}</option>)}
         </Select>
         <Select value={payer} onChange={(event) => setPayer(event.target.value)}>
-          <option value="all">Any payer</option>
+          <option value="all">{t("expenses.anyPayer")}</option>
           {members.map((member) => <option key={member.uid} value={member.uid}>{member.displayName}</option>)}
         </Select>
         <Input type="month" value={month} onChange={(event) => setMonth(event.target.value)} />
@@ -78,9 +81,9 @@ export default function ExpensesPage() {
           ))
         ) : (
           <EmptyState
-            title={activeExpenses.length ? "No expenses match these filters" : "No expenses yet"}
-            message={activeExpenses.length ? "Try a different search, category, payer, or month." : "Add the first shared cost when you are ready."}
-            action={!activeExpenses.length ? <Link href="/app/expenses/new"><Button>Add expense</Button></Link> : null}
+            title={activeExpenses.length ? t("expenses.noMatchTitle") : t("dashboard.noExpensesTitle")}
+            message={activeExpenses.length ? t("expenses.noMatchMessage") : t("dashboard.noExpensesMessage")}
+            action={!activeExpenses.length ? <Link href="/app/expenses/new"><Button>{t("quick.addExpense")}</Button></Link> : null}
           />
         )}
       </div>

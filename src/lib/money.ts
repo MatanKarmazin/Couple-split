@@ -10,8 +10,8 @@ export function parseMoneyToMinor(input: string): number {
   return Number(whole) * 100 + Number(decimal.padEnd(2, "0"));
 }
 
-export function formatMoney(amountMinor: number, currency: CurrencyCode = "ILS") {
-  return new Intl.NumberFormat("he-IL", {
+export function formatMoney(amountMinor: number, currency: CurrencyCode = "ILS", locale = "he-IL") {
+  return new Intl.NumberFormat(locale, {
     style: "currency",
     currency,
     minimumFractionDigits: 2,

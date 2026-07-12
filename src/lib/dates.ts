@@ -16,6 +16,17 @@ export function formatDate(value: FirestoreDate, pattern = "MMM d, yyyy") {
   return isValid(date) ? format(date, pattern) : "Unknown date";
 }
 
+export function formatDateLocale(value: FirestoreDate, locale = "en-US", style: "medium" | "monthYear" = "medium") {
+  const date = toDate(value);
+  if (!isValid(date)) return locale.startsWith("he") ? "תאריך לא ידוע" : "Unknown date";
+
+  if (style === "monthYear") {
+    return new Intl.DateTimeFormat(locale, { month: "long", year: "numeric" }).format(date);
+  }
+
+  return new Intl.DateTimeFormat(locale, { month: "short", day: "numeric", year: "numeric" }).format(date);
+}
+
 export function inputDate(value: FirestoreDate = new Date()) {
   return format(toDate(value), "yyyy-MM-dd");
 }

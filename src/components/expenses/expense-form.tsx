@@ -5,8 +5,10 @@ import { useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select, Textarea } from "@/components/ui/input";
+import { useLanguage } from "@/hooks/useLanguage";
 import { categories, expenseSchema, type ExpenseFormValues } from "@/lib/validators";
 import { inputDate } from "@/lib/dates";
+import { categoryLabel, splitTypeLabel } from "@/lib/i18n";
 import {
   calculateAmountShares,
   calculateEqualShares,
@@ -29,6 +31,7 @@ export function ExpenseForm({
   onSubmit: (values: ExpenseFormValues) => Promise<void>;
   submitting?: boolean;
 }) {
+  const { language, locale, t } = useLanguage();
   const {
     register,
     handleSubmit,
@@ -68,9 +71,10 @@ export function ExpenseForm({
         owedByUid,
         shareAmounts,
         sharePercentages,
-        members
+        members,
+        fallbackName: t("common.someone")
       }),
-    [amount, members, owedByUid, paidByUid, shareAmounts, sharePercentages, splitType]
+    [amount, members, owedByUid, paidByUid, shareAmounts, sharePercentages, splitType, t]
   );
 
   useEffect(() => {
@@ -95,26 +99,26 @@ export function ExpenseForm({
 
   return (
     <form className="grid gap-4" onSubmit={handleSubmit(submit)}>
-      <Field label="Description" error={errors.description?.message}>
-        <Input placeholder="Dinner, groceries, rent..." {...register("description")} />
+      <Field label={t("expenses.description")} error={errors.description?.message}>
+        <Input placeholder={t("expenses.descriptionPlaceholder")} {...register("description")} />
       </Field>
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Amount" error={errors.amount?.message}>
+        <Field label={t("common.amount")} error={errors.amount?.message}>
           <Input inputMode="decimal" placeholder="123.45" {...register("amount")} />
         </Field>
-        <Field label="Date" error={errors.date?.message}>
+        <Field label={t("common.date")} error={errors.date?.message}>
           <Input type="date" {...register("date")} />
         </Field>
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Category" error={errors.category?.message}>
+        <Field label={t("common.category")} error={errors.category?.message}>
           <Select {...register("category")}>
             {categories.map((category) => (
-              <option key={category}>{category}</option>
+              <option key={category} value={category}>{categoryLabel(language, category)}</option>
             ))}
           </Select>
         </Field>
-        <Field label="Paid by" error={errors.paidByUid?.message}>
+        <Field label={t("expenses.paidBy")} error={errors.paidByUid?.message}>
           <Select {...register("paidByUid")}>
             {members.map((member) => (
               <option key={member.uid} value={member.uid}>{member.displayName}</option>
@@ -122,16 +126,16 @@ export function ExpenseForm({
           </Select>
         </Field>
       </div>
-      <Field label="Split" error={errors.splitType?.message}>
+      <Field label={t("expenses.split")} error={errors.splitType?.message}>
         <Select {...register("splitType")}>
-          <option value="equal">Equal split</option>
-          <option value="one_person">One person owes all</option>
-          <option value="amounts">Custom amounts</option>
-          <option value="percentage">Custom percentage</option>
+          <option value="equal">{splitTypeLabel(language, "equal")}</option>
+          <option value="one_person">{splitTypeLabel(language, "one_person")}</option>
+          <option value="amounts">{splitTypeLabel(language, "amounts")}</option>
+          <option value="percentage">{splitTypeLabel(language, "percentage")}</option>
         </Select>
       </Field>
       {splitType === "one_person" ? (
-        <Field label="Owed by" error={errors.owedByUid?.message}>
+        <Field label={t("expenses.owedBy")} error={errors.owedByUid?.message}>
           <Select {...register("owedByUid")}>
             {members.map((member) => (
               <option key={member.uid} value={member.uid}>{member.displayName}</option>
@@ -142,7 +146,7 @@ export function ExpenseForm({
       {splitType === "amounts" ? (
         <div className="grid gap-4 sm:grid-cols-2">
           {members.map((member) => (
-            <Field key={member.uid} label={`${member.displayName} share`}>
+            <Field key={member.uid} label={t("expenses.share", { name: member.displayName })}>
               <Input inputMode="decimal" placeholder="0.00" {...register(`shareAmounts.${member.uid}`)} />
             </Field>
           ))}
@@ -152,7 +156,7 @@ export function ExpenseForm({
         <div className="grid gap-4 sm:grid-cols-2">
           {members.map((member, index) => {
             return (
-              <Field key={member.uid} label={`${member.displayName} percent`}>
+              <Field key={member.uid} label={t("expenses.percent", { name: member.displayName })}>
                 <Input
                   inputMode="decimal"
                   placeholder={index === 0 ? "50" : "50"}
@@ -170,30 +174,28 @@ export function ExpenseForm({
           })}
         </div>
       ) : null}
-      <Field label="Notes" error={errors.notes?.message}>
-        <Textarea placeholder="Optional note" {...register("notes")} />
+      <Field label={t("common.notes")} error={errors.notes?.message}>
+        <Textarea placeholder={t("common.optionalNote")} {...register("notes")} />
       </Field>
       <div className="rounded-lg bg-surface-muted p-4">
-        <p className="text-sm font-bold text-text">Split preview</p>
+        <p className="text-sm font-bold text-text">{t("expenses.splitPreview")}</p>
         {splitPreview ? (
           <div className="mt-2 grid gap-2 text-sm text-text-muted">
-            <p>
-              {splitPreview.payerName} pays {formatMoney(splitPreview.amountMinor)}.
-            </p>
+            <p>{t("expenses.previewPays", { name: splitPreview.payerName, amount: formatMoney(splitPreview.amountMinor, "ILS", locale) })}</p>
             <div className="grid gap-1">
               {splitPreview.shares.map((share) => (
                 <div key={share.uid} className="flex items-center justify-between gap-3 rounded-md bg-surface/70 px-3 py-2">
                   <span className="font-semibold text-text">{share.name}</span>
-                  <span>{formatMoney(share.amountMinor)}</span>
+                  <span>{formatMoney(share.amountMinor, "ILS", locale)}</span>
                 </div>
               ))}
             </div>
           </div>
         ) : (
-          <p className="mt-1 text-sm text-text-muted">Enter an amount and split details to preview who owes what.</p>
+          <p className="mt-1 text-sm text-text-muted">{t("expenses.previewEmpty")}</p>
         )}
       </div>
-      <Button type="submit" disabled={submitting}>{submitting ? "Saving..." : "Save expense"}</Button>
+      <Button type="submit" disabled={submitting}>{submitting ? t("common.saving") : t("expenses.save")}</Button>
     </form>
   );
 }
@@ -205,7 +207,8 @@ function buildSplitPreview({
   owedByUid,
   shareAmounts,
   sharePercentages,
-  members
+  members,
+  fallbackName
 }: {
   amount: string;
   splitType: ExpenseFormValues["splitType"];
@@ -214,6 +217,7 @@ function buildSplitPreview({
   shareAmounts?: Record<string, string>;
   sharePercentages?: Record<string, string>;
   members: HouseholdMember[];
+  fallbackName: string;
 }) {
   const participants = members.map((member) => member.uid);
   if (!participants.length || !paidByUid) return null;
@@ -228,7 +232,7 @@ function buildSplitPreview({
           : splitType === "percentage"
             ? calculatePercentageShares(amountMinor, participants, sharePercentages)
             : calculateEqualShares(amountMinor, participants);
-    const payerName = members.find((member) => member.uid === paidByUid)?.displayName ?? "Someone";
+    const payerName = members.find((member) => member.uid === paidByUid)?.displayName ?? fallbackName;
 
     return {
       amountMinor,

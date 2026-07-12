@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { useLanguage } from "@/hooks/useLanguage";
 
 export function ConfirmDialog({
   open,
@@ -17,6 +18,7 @@ export function ConfirmDialog({
   onCancel: () => void;
   onConfirm: () => void;
 }) {
+  const { t } = useLanguage();
   if (!open) return null;
 
   return (
@@ -25,7 +27,7 @@ export function ConfirmDialog({
         <h2 className="text-lg font-bold text-text">{title}</h2>
         <p className="mt-2 text-sm text-text-muted">{message}</p>
         <div className="mt-5 flex justify-end gap-2">
-          <Button variant="secondary" onClick={onCancel}>Cancel</Button>
+          <Button variant="secondary" onClick={onCancel}>{t("common.cancel")}</Button>
           <Button variant="danger" onClick={onConfirm}>{confirmLabel}</Button>
         </div>
       </div>

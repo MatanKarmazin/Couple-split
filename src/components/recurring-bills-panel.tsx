@@ -11,9 +11,11 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Field, Input, Select, Textarea } from "@/components/ui/input";
 import { useAuth } from "@/hooks/useAuth";
 import { useHousehold } from "@/hooks/useHousehold";
+import { useLanguage } from "@/hooks/useLanguage";
 import { useRecurringBills } from "@/hooks/useRecurringBills";
-import { formatDate } from "@/lib/dates";
+import { formatDateLocale } from "@/lib/dates";
 import { saveRecurringBill, softDeleteRecurringBill, toggleRecurringBill } from "@/lib/firebase/firestore";
+import { categoryLabel } from "@/lib/i18n";
 import { formatMoney, minorToInput } from "@/lib/money";
 import { categories, recurringBillSchema, type RecurringBillFormValues } from "@/lib/validators";
 import type { HouseholdMember, RecurringBill } from "@/types";
@@ -22,6 +24,7 @@ import { useToast } from "@/components/ui/toast";
 export function RecurringBillsPanel() {
   const { appUser } = useAuth();
   const { household, members } = useHousehold();
+  const { language, locale, t } = useLanguage();
   const { activeRecurringBills } = useRecurringBills(household?.id, members);
   const { showToast } = useToast();
   const [editingBill, setEditingBill] = useState<RecurringBill | null>(null);
@@ -58,11 +61,11 @@ export function RecurringBillsPanel() {
     setSubmitting(true);
     try {
       await saveRecurringBill(household.id, appUser.uid, values, editingBill?.id);
-      showToast({ title: editingBill ? "Recurring bill updated" : "Recurring bill added" });
+      showToast({ title: editingBill ? t("recurring.updated") : t("recurring.added") });
       setEditingBill(null);
       form.reset(emptyValues(members[0]?.uid));
     } catch (error) {
-      showToast({ title: "Could not save recurring bill", message: error instanceof Error ? error.message : "Try again.", tone: "error" });
+      showToast({ title: t("recurring.couldNotSave"), message: error instanceof Error ? error.message : t("common.tryAgain"), tone: "error" });
     } finally {
       setSubmitting(false);
     }
@@ -71,73 +74,73 @@ export function RecurringBillsPanel() {
   async function toggleBill(bill: RecurringBill) {
     if (!household) return;
     await toggleRecurringBill(household.id, bill.id, !bill.active);
-    showToast({ title: bill.active ? "Recurring bill paused" : "Recurring bill resumed" });
+    showToast({ title: bill.active ? t("recurring.paused") : t("recurring.resumed") });
   }
 
   async function removeBill() {
     if (!household || !confirmBill) return;
     await softDeleteRecurringBill(household.id, confirmBill.id);
-    showToast({ title: "Recurring bill deleted" });
+    showToast({ title: t("recurring.deleted") });
     setConfirmBill(null);
     if (editingBill?.id === confirmBill.id) setEditingBill(null);
   }
 
   return (
     <section id="recurring" className="scroll-mt-6 grid gap-4">
-      <SectionHeader title="Recurring bills" subtitle="Due bills are created as normal expenses." />
+      <SectionHeader title={t("recurring.title")} subtitle={t("recurring.subtitle")} />
       <div className="grid gap-5 lg:grid-cols-[0.95fr_1.05fr]">
         <Card>
           <form className="grid gap-4" onSubmit={form.handleSubmit(submit)}>
             <div className="flex items-center justify-between gap-3">
-              <h2 className="text-base font-bold text-text">{editingBill ? "Edit recurring bill" : "Add recurring bill"}</h2>
-              {editingBill ? <Button variant="ghost" onClick={() => setEditingBill(null)}>Cancel</Button> : null}
+              <h2 className="text-base font-bold text-text">{editingBill ? t("recurring.edit") : t("recurring.add")}</h2>
+              {editingBill ? <Button variant="ghost" onClick={() => setEditingBill(null)}>{t("common.cancel")}</Button> : null}
             </div>
-            <Field label="Description" error={form.formState.errors.description?.message}>
-              <Input placeholder="Rent, internet, parking..." {...form.register("description")} />
+            <Field label={t("expenses.description")} error={form.formState.errors.description?.message}>
+              <Input placeholder={t("recurring.descriptionPlaceholder")} {...form.register("description")} />
             </Field>
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Amount" error={form.formState.errors.amount?.message}>
+              <Field label={t("common.amount")} error={form.formState.errors.amount?.message}>
                 <Input inputMode="decimal" placeholder="4500.00" {...form.register("amount")} />
               </Field>
-              <Field label="Category" error={form.formState.errors.category?.message}>
+              <Field label={t("common.category")} error={form.formState.errors.category?.message}>
                 <Select {...form.register("category")}>
-                  {categories.map((category) => <option key={category}>{category}</option>)}
+                  {categories.map((category) => <option key={category} value={category}>{categoryLabel(language, category)}</option>)}
                 </Select>
               </Field>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Paid by" error={form.formState.errors.paidByUid?.message}>
+              <Field label={t("recurring.paidBy")} error={form.formState.errors.paidByUid?.message}>
                 <Select {...form.register("paidByUid")}>
                   {members.map((member) => <option key={member.uid} value={member.uid}>{member.displayName}</option>)}
                 </Select>
               </Field>
-              <Field label="Day of month" error={form.formState.errors.dayOfMonth?.message}>
+              <Field label={t("recurring.dayOfMonth")} error={form.formState.errors.dayOfMonth?.message}>
                 <Input type="number" min={1} max={31} {...form.register("dayOfMonth")} />
               </Field>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Start month" error={form.formState.errors.startMonth?.message}>
+              <Field label={t("recurring.startMonth")} error={form.formState.errors.startMonth?.message}>
                 <Input type="month" {...form.register("startMonth")} />
               </Field>
-              <Field label="Repeats" error={form.formState.errors.frequencyMonths?.message}>
+              <Field label={t("recurring.repeats")} error={form.formState.errors.frequencyMonths?.message}>
                 <Select {...form.register("frequencyMonths")}>
-                  <option value={1}>Monthly</option>
-                  <option value={2}>Every two months</option>
+                  <option value={1}>{t("recurring.monthly")}</option>
+                  <option value={2}>{t("recurring.everyTwoMonths")}</option>
                 </Select>
               </Field>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="flex min-h-11 items-center gap-3 rounded-md border border-border bg-surface px-3 text-sm font-semibold text-text">
                 <input type="checkbox" {...form.register("active")} />
-                Active
+                {t("recurring.active")}
               </label>
             </div>
-            <Field label="Notes" error={form.formState.errors.notes?.message}>
-              <Textarea placeholder="Optional note" {...form.register("notes")} />
+            <Field label={t("common.notes")} error={form.formState.errors.notes?.message}>
+              <Textarea placeholder={t("common.optionalNote")} {...form.register("notes")} />
             </Field>
             <Button type="submit" disabled={submitting || members.length < 2}>
               <Plus className="h-4 w-4" />
-              {submitting ? "Saving..." : editingBill ? "Save changes" : "Add recurring bill"}
+              {submitting ? t("common.saving") : editingBill ? t("common.saveChanges") : t("recurring.add")}
             </Button>
           </form>
         </Card>
@@ -148,6 +151,8 @@ export function RecurringBillsPanel() {
               key={bill.id}
               bill={bill}
               members={members}
+              language={language}
+              locale={locale}
               onEdit={setEditingBill}
               onToggle={toggleBill}
               onDelete={setConfirmBill}
@@ -155,16 +160,16 @@ export function RecurringBillsPanel() {
           )) : (
             <Card className="grid place-items-center gap-2 py-8 text-center text-sm text-text-muted">
               <CalendarClock className="h-8 w-8 text-primary" />
-              No recurring bills yet.
+              {t("recurring.empty")}
             </Card>
           )}
         </section>
       </div>
       <ConfirmDialog
         open={Boolean(confirmBill)}
-        title="Delete recurring bill?"
-        message="Future expenses will stop being created. Existing expenses stay in your ledger."
-        confirmLabel="Delete"
+        title={t("recurring.deleteTitle")}
+        message={t("recurring.deleteMessage")}
+        confirmLabel={t("common.delete")}
         onCancel={() => setConfirmBill(null)}
         onConfirm={() => void removeBill()}
       />
@@ -175,29 +180,32 @@ export function RecurringBillsPanel() {
 export function RecurringBillsSummary() {
   const { household, members } = useHousehold();
   const { activeRecurringBills } = useRecurringBills(household?.id, members);
+  const { locale, t } = useLanguage();
   const visibleBills = activeRecurringBills.slice(0, 3);
 
   return (
     <section className="grid gap-3">
-      <SectionHeader title="Recurring bills" />
+      <SectionHeader title={t("recurring.title")} />
       {visibleBills.length ? visibleBills.map((bill) => {
-        const payer = members.find((member) => member.uid === bill.paidByUid)?.displayName ?? "Someone";
+        const payer = members.find((member) => member.uid === bill.paidByUid)?.displayName ?? t("common.someone");
         return (
           <Card key={bill.id} className="p-3">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
                   <p className="truncate text-sm font-bold text-text">{bill.description}</p>
-                  <Badge>{bill.active ? "Active" : "Paused"}</Badge>
+                  <Badge>{bill.active ? t("recurring.activeBadge") : t("recurring.pausedBadge")}</Badge>
                 </div>
-                <p className="mt-1 text-xs text-text-muted">Paid by {payer} - {frequencyLabel(bill)} - next {formatDate(nextDueDate(bill))}</p>
+                <p className="mt-1 text-xs text-text-muted">
+                  {t("recurring.nextLine", { payer, frequency: frequencyLabel(bill, t), date: formatDateLocale(nextDueDate(bill), locale) })}
+                </p>
               </div>
-              <p className="shrink-0 text-sm font-bold text-text">{formatMoney(bill.amountMinor)}</p>
+              <p className="shrink-0 text-sm font-bold text-text">{formatMoney(bill.amountMinor, "ILS", locale)}</p>
             </div>
           </Card>
         );
       }) : (
-        <Card className="text-sm text-text-muted">No recurring bills yet.</Card>
+        <Card className="text-sm text-text-muted">{t("recurring.empty")}</Card>
       )}
     </section>
   );
@@ -206,17 +214,22 @@ export function RecurringBillsSummary() {
 function RecurringBillCard({
   bill,
   members,
+  language,
+  locale,
   onEdit,
   onToggle,
   onDelete
 }: {
   bill: RecurringBill;
   members: HouseholdMember[];
+  language: "en" | "he";
+  locale: string;
   onEdit: (bill: RecurringBill) => void;
   onToggle: (bill: RecurringBill) => void;
   onDelete: (bill: RecurringBill) => void;
 }) {
-  const payer = members.find((member) => member.uid === bill.paidByUid)?.displayName ?? "Someone";
+  const { t } = useLanguage();
+  const payer = members.find((member) => member.uid === bill.paidByUid)?.displayName ?? t("common.someone");
 
   return (
     <Card className="grid gap-3">
@@ -224,20 +237,22 @@ function RecurringBillCard({
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <h2 className="truncate text-sm font-bold text-text">{bill.description}</h2>
-            <Badge>{bill.active ? "Active" : "Paused"}</Badge>
+            <Badge>{bill.active ? t("recurring.activeBadge") : t("recurring.pausedBadge")}</Badge>
           </div>
-          <p className="mt-1 text-xs text-text-muted">Paid by {payer} - {frequencyLabel(bill)} - next {formatDate(nextDueDate(bill))}</p>
+          <p className="mt-1 text-xs text-text-muted">
+            {t("recurring.nextLine", { payer, frequency: frequencyLabel(bill, t), date: formatDateLocale(nextDueDate(bill), locale) })}
+          </p>
         </div>
         <div className="text-right">
-          <p className="text-sm font-bold text-text">{formatMoney(bill.amountMinor)}</p>
-          <p className="mt-1 text-xs text-text-muted">{bill.category}</p>
+          <p className="text-sm font-bold text-text">{formatMoney(bill.amountMinor, "ILS", locale)}</p>
+          <p className="mt-1 text-xs text-text-muted">{categoryLabel(language, bill.category)}</p>
         </div>
       </div>
       {bill.notes ? <p className="text-sm text-text-muted">{bill.notes}</p> : null}
       <div className="flex flex-wrap gap-2">
-        <Button variant="secondary" onClick={() => onEdit(bill)}><Pencil className="h-4 w-4" />Edit</Button>
-        <Button variant="secondary" onClick={() => void onToggle(bill)}><Power className="h-4 w-4" />{bill.active ? "Pause" : "Resume"}</Button>
-        <Button variant="danger" onClick={() => onDelete(bill)}><Trash2 className="h-4 w-4" />Delete</Button>
+        <Button variant="secondary" onClick={() => onEdit(bill)}><Pencil className="h-4 w-4" />{t("common.edit")}</Button>
+        <Button variant="secondary" onClick={() => void onToggle(bill)}><Power className="h-4 w-4" />{bill.active ? t("recurring.pause") : t("recurring.resume")}</Button>
+        <Button variant="danger" onClick={() => onDelete(bill)}><Trash2 className="h-4 w-4" />{t("common.delete")}</Button>
       </div>
     </Card>
   );
@@ -284,6 +299,6 @@ function startOfDay(date: Date) {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate());
 }
 
-function frequencyLabel(bill: RecurringBill) {
-  return bill.frequencyMonths === 2 ? "Every two months" : "Monthly";
+function frequencyLabel(bill: RecurringBill, t: ReturnType<typeof useLanguage>["t"]) {
+  return bill.frequencyMonths === 2 ? t("recurring.everyTwoMonths") : t("recurring.monthly");
 }

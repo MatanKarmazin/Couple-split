@@ -1,14 +1,17 @@
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { CategoryIcon } from "@/components/expenses/category-icon";
-import { formatDate } from "@/lib/dates";
+import { useLanguage } from "@/hooks/useLanguage";
+import { formatDateLocale } from "@/lib/dates";
+import { categoryLabel, shortSplitTypeLabel } from "@/lib/i18n";
 import { formatMoney } from "@/lib/money";
 import type { Expense, HouseholdMember } from "@/types";
 
 export function ExpenseCard({ expense, members }: { expense: Expense; members: HouseholdMember[] }) {
-  const payer = members.find((member) => member.uid === expense.paidByUid)?.displayName ?? "Someone";
+  const { language, locale, t } = useLanguage();
+  const payer = members.find((member) => member.uid === expense.paidByUid)?.displayName ?? t("common.someone");
   const splitSummary = members
-    .map((member) => `${member.displayName}: ${formatMoney(expense.shares[member.uid] ?? 0)}`)
+    .map((member) => `${member.displayName}: ${formatMoney(expense.shares[member.uid] ?? 0, "ILS", locale)}`)
     .join(" / ");
 
   return (
@@ -21,24 +24,17 @@ export function ExpenseCard({ expense, members }: { expense: Expense; members: H
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <p className="truncate text-sm font-bold text-text">{expense.description}</p>
-              {expense.recurringBillId ? <Badge>Recurring</Badge> : null}
+              {expense.recurringBillId ? <Badge>{t("expenses.recurringBadge")}</Badge> : null}
             </div>
-            <p className="mt-1 text-xs text-text-muted">Paid by {payer} - {formatDate(expense.date)}</p>
-            <p className="mt-1 truncate text-xs text-text-muted/80">{splitLabel(expense.splitType)} - {splitSummary}</p>
+            <p className="mt-1 text-xs text-text-muted">{t("expenses.paidByLine", { name: payer, date: formatDateLocale(expense.date, locale) })}</p>
+            <p className="mt-1 truncate text-xs text-text-muted/80">{shortSplitTypeLabel(language, expense.splitType)} - {splitSummary}</p>
           </div>
         </div>
         <div className="shrink-0 text-right">
-          <p className="text-sm font-bold text-text">{formatMoney(expense.amountMinor)}</p>
-          <Badge className="mt-1">{expense.category}</Badge>
+          <p className="text-sm font-bold text-text">{formatMoney(expense.amountMinor, "ILS", locale)}</p>
+          <Badge className="mt-1">{categoryLabel(language, expense.category)}</Badge>
         </div>
       </div>
     </Link>
   );
-}
-
-function splitLabel(splitType: Expense["splitType"]) {
-  if (splitType === "one_person") return "One person";
-  if (splitType === "amounts") return "Custom amounts";
-  if (splitType === "percentage") return "Custom percent";
-  return "Equal";
 }
