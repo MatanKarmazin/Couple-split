@@ -33,4 +33,12 @@ describe("money utilities", () => {
   it("uses percentage shares", () => {
     expect(calculatePercentageShares(10000, ["a", "b"], { a: "60", b: "40" })).toEqual({ a: 6000, b: 4000 });
   });
+
+  it("uses percentage shares for groups", () => {
+    expect(calculatePercentageShares(10001, ["a", "b", "c"], { a: "50", b: "25", c: "25" })).toEqual({
+      a: 5001,
+      b: 2500,
+      c: 2500
+    });
+  });
 });

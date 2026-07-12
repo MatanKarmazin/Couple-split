@@ -61,8 +61,8 @@ export function calculatePercentageShares(
   participants: string[],
   sharePercentages: Record<string, string> = {}
 ) {
-  if (participants.length !== 2) {
-    throw new Error("Percentage split is available for two household members.");
+  if (participants.length === 0) {
+    throw new Error("Choose at least one participant.");
   }
 
   const percentages = participants.map((uid) => parsePercentage(sharePercentages[uid] ?? ""));
@@ -71,11 +71,14 @@ export function calculatePercentageShares(
     throw new Error("Percentages must add up to 100.");
   }
 
-  const firstShare = Math.round((amountMinor * percentages[0]) / 100);
-  return {
-    [participants[0]]: firstShare,
-    [participants[1]]: amountMinor - firstShare
-  };
+  let allocated = 0;
+  return participants.reduce<Record<string, number>>((shares, uid, index) => {
+    const isLast = index === participants.length - 1;
+    const share = isLast ? amountMinor - allocated : Math.round((amountMinor * percentages[index]) / 100);
+    shares[uid] = share;
+    allocated += share;
+    return shares;
+  }, {});
 }
 
 export function assertSharesTotal(amountMinor: number, shares: Record<string, number>) {

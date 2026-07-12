@@ -14,8 +14,19 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/households/$(householdId)).data;
     }
 
+    function memberData(householdId, uid) {
+      return get(/databases/$(database)/documents/households/$(householdId)/members/$(uid)).data;
+    }
+
     function isHouseholdMember(householdId) {
       return signedIn() && request.auth.uid in householdData(householdId).memberIds;
+    }
+
+    function isHouseholdOwner(householdId) {
+      return isHouseholdMember(householdId)
+        && memberData(householdId, request.auth.uid).role == "owner"
+        && memberData(householdId, request.auth.uid).status != "left"
+        && memberData(householdId, request.auth.uid).status != "removed";
     }
 
     function validHouseholdCreate() {
@@ -23,6 +34,8 @@ service cloud.firestore {
         && request.resource.data.createdByUid == request.auth.uid
         && request.resource.data.memberIds is list
         && request.auth.uid in request.resource.data.memberIds
+        && request.resource.data.memberIds.size() >= 1
+        && request.resource.data.memberIds.size() <= 8
         && request.resource.data.defaultCurrency == "ILS"
         && request.resource.data.inviteCode is string
         && request.resource.data.name is string;
@@ -45,7 +58,7 @@ service cloud.firestore {
     function validHouseholdJoin(householdId) {
       return signedIn()
         && !(request.auth.uid in resource.data.memberIds)
-        && resource.data.memberIds.size() < 2
+        && resource.data.memberIds.size() < 8
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["memberIds", "updatedAt"])
         && request.resource.data.memberIds.hasAll(resource.data.memberIds)
         && request.auth.uid in request.resource.data.memberIds
@@ -53,23 +66,68 @@ service cloud.firestore {
         && exists(/databases/$(database)/documents/inviteCodes/$(resource.data.inviteCode)/joins/$(request.auth.uid));
     }
 
+    function validHouseholdLeave(householdId) {
+      return isHouseholdMember(householdId)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["memberIds", "updatedAt"])
+        && resource.data.memberIds.hasAll(request.resource.data.memberIds)
+        && !(request.auth.uid in request.resource.data.memberIds)
+        && request.resource.data.memberIds.size() == resource.data.memberIds.size() - 1
+        && request.resource.data.memberIds.size() >= 1;
+    }
+
+    function validHouseholdMemberRemove(householdId) {
+      return isHouseholdOwner(householdId)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["memberIds", "updatedAt"])
+        && request.auth.uid in request.resource.data.memberIds
+        && resource.data.memberIds.hasAll(request.resource.data.memberIds)
+        && request.resource.data.memberIds.size() == resource.data.memberIds.size() - 1
+        && request.resource.data.memberIds.size() >= 1;
+    }
+
+    function validHouseholdMetadataUpdate(householdId) {
+      return isHouseholdMember(householdId)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["name", "updatedAt"])
+        && request.resource.data.createdByUid == resource.data.createdByUid
+        && request.resource.data.defaultCurrency == "ILS"
+        && request.resource.data.memberIds == resource.data.memberIds
+        && request.resource.data.inviteCode == resource.data.inviteCode;
+    }
+
     function validExpenseParticipants(householdId) {
       return request.resource.data.participants is list
-        && request.resource.data.participants.size() == householdData(householdId).memberIds.size()
-        && request.resource.data.participants.hasAll(householdData(householdId).memberIds)
+        && request.resource.data.participants.size() >= 1
+        && request.resource.data.participants.size() <= 8
         && householdData(householdId).memberIds.hasAll(request.resource.data.participants);
+    }
+
+    function validShareAt(index) {
+      return request.resource.data.participants.size() <= index
+        || (
+          request.resource.data.shares[request.resource.data.participants[index]] is int
+          && request.resource.data.shares[request.resource.data.participants[index]] >= 0
+        );
+    }
+
+    function shareAt(index) {
+      return request.resource.data.participants.size() > index
+        ? request.resource.data.shares[request.resource.data.participants[index]]
+        : 0;
     }
 
     function validExpenseShares(householdId) {
       return request.resource.data.shares is map
-        && request.resource.data.shares.keys().size() == householdData(householdId).memberIds.size()
-        && request.resource.data.shares.keys().hasAll(householdData(householdId).memberIds)
-        && request.resource.data.shares[householdData(householdId).memberIds[0]] is int
-        && request.resource.data.shares[householdData(householdId).memberIds[1]] is int
-        && request.resource.data.shares[householdData(householdId).memberIds[0]] >= 0
-        && request.resource.data.shares[householdData(householdId).memberIds[1]] >= 0
-        && request.resource.data.shares[householdData(householdId).memberIds[0]]
-          + request.resource.data.shares[householdData(householdId).memberIds[1]]
+        && request.resource.data.shares.keys().size() == request.resource.data.participants.size()
+        && request.resource.data.shares.keys().hasAll(request.resource.data.participants)
+        && validShareAt(0)
+        && validShareAt(1)
+        && validShareAt(2)
+        && validShareAt(3)
+        && validShareAt(4)
+        && validShareAt(5)
+        && validShareAt(6)
+        && validShareAt(7)
+        && shareAt(0) + shareAt(1) + shareAt(2) + shareAt(3)
+          + shareAt(4) + shareAt(5) + shareAt(6) + shareAt(7)
           == request.resource.data.amountMinor;
     }
 
@@ -86,6 +144,13 @@ service cloud.firestore {
         && request.resource.data.splitType in ["equal", "one_person", "amounts", "percentage"]
         && validExpenseParticipants(householdId)
         && validExpenseShares(householdId);
+    }
+
+    function validExpenseSoftDelete(householdId) {
+      return isHouseholdMember(householdId)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["deletedAt", "updatedAt"])
+        && request.resource.data.createdByUid == resource.data.createdByUid
+        && request.resource.data.householdId == householdId;
     }
 
     function validSettlementCreate(householdId) {
@@ -127,6 +192,13 @@ service cloud.firestore {
         && request.resource.data.active is bool;
     }
 
+    function validRecurringBillSoftDelete(householdId) {
+      return isHouseholdMember(householdId)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["active", "deletedAt", "updatedAt"])
+        && request.resource.data.createdByUid == resource.data.createdByUid
+        && request.resource.data.householdId == householdId;
+    }
+
     // Users can manage only their own profile document.
     match /users/{uid} {
       allow read: if isSelf(uid);
@@ -151,11 +223,10 @@ service cloud.firestore {
       allow create: if validHouseholdCreate();
       allow read: if isHouseholdMember(householdId);
       // Existing members can update household metadata and memberIds; ownership spoofing is blocked.
-      allow update: if (
-        isHouseholdMember(householdId)
-        && request.resource.data.createdByUid == resource.data.createdByUid
-        && request.resource.data.defaultCurrency == "ILS"
-      ) || validHouseholdJoin(householdId);
+      allow update: if validHouseholdMetadataUpdate(householdId)
+        || validHouseholdJoin(householdId)
+        || validHouseholdLeave(householdId)
+        || validHouseholdMemberRemove(householdId);
       allow delete: if false;
 
       match /members/{uid} {
@@ -164,7 +235,8 @@ service cloud.firestore {
         allow create: if isSelf(uid)
           && request.auth.uid in householdData(householdId).memberIds
           && request.resource.data.uid == request.auth.uid;
-        allow update: if isSelf(uid) && isHouseholdMember(householdId);
+        allow update: if (isSelf(uid) && isHouseholdMember(householdId))
+          || isHouseholdOwner(householdId);
         allow delete: if false;
       }
 
@@ -172,12 +244,15 @@ service cloud.firestore {
         allow read: if isHouseholdMember(householdId);
         allow create: if validExpenseCreate(householdId);
         // Members may edit or soft-delete expenses, but cannot change creator identity.
-        allow update: if isHouseholdMember(householdId)
-          && request.resource.data.createdByUid == resource.data.createdByUid
-          && request.resource.data.householdId == householdId
-          && request.resource.data.splitType in ["equal", "one_person", "amounts", "percentage"]
-          && validExpenseParticipants(householdId)
-          && validExpenseShares(householdId);
+        allow update: if validExpenseSoftDelete(householdId)
+          || (
+            isHouseholdMember(householdId)
+            && request.resource.data.createdByUid == resource.data.createdByUid
+            && request.resource.data.householdId == householdId
+            && request.resource.data.splitType in ["equal", "one_person", "amounts", "percentage"]
+            && validExpenseParticipants(householdId)
+            && validExpenseShares(householdId)
+          );
         allow delete: if false;
       }
 
@@ -185,8 +260,11 @@ service cloud.firestore {
         allow read: if isHouseholdMember(householdId);
         allow create: if validRecurringBillWrite(householdId)
           && request.resource.data.createdByUid == request.auth.uid;
-        allow update: if validRecurringBillWrite(householdId)
-          && request.resource.data.createdByUid == resource.data.createdByUid;
+        allow update: if validRecurringBillSoftDelete(householdId)
+          || (
+            validRecurringBillWrite(householdId)
+            && request.resource.data.createdByUid == resource.data.createdByUid
+          );
         allow delete: if false;
       }
 

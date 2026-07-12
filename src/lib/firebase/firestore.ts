@@ -1,5 +1,6 @@
 import {
   addDoc,
+  arrayRemove,
   arrayUnion,
   collection,
   doc,
@@ -10,6 +11,7 @@ import {
   serverTimestamp,
   setDoc,
   updateDoc,
+  writeBatch,
   type Unsubscribe
 } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
@@ -37,7 +39,33 @@ export function listenToUser(uid: string, callback: (user: AppUser | null) => vo
 export function listenToHousehold(householdId: string, callback: (household: Household | null) => void): Unsubscribe {
   return onSnapshot(doc(db, "households", householdId), (snapshot) => {
     callback(snapshot.exists() ? withId<Household>(snapshot.id, snapshot.data()) : null);
+  }, () => {
+    callback(null);
   });
+}
+
+export function listenToHouseholds(householdIds: string[] = [], callback: (households: Household[]) => void): Unsubscribe {
+  if (!householdIds.length) {
+    callback([]);
+    return () => undefined;
+  }
+
+  const households = new Map<string, Household>();
+  const unsubscribes = householdIds.map((householdId) =>
+    onSnapshot(doc(db, "households", householdId), (snapshot) => {
+      if (snapshot.exists()) {
+        households.set(snapshot.id, withId<Household>(snapshot.id, snapshot.data()));
+      } else {
+        households.delete(householdId);
+      }
+      callback(householdIds.map((id) => households.get(id)).filter(Boolean) as Household[]);
+    }, () => {
+      households.delete(householdId);
+      callback(householdIds.map((id) => households.get(id)).filter(Boolean) as Household[]);
+    })
+  );
+
+  return () => unsubscribes.forEach((unsubscribe) => unsubscribe());
 }
 
 export function listenToMembers(householdId: string, callback: (members: HouseholdMember[]) => void): Unsubscribe {
@@ -75,7 +103,8 @@ export async function createHousehold(user: AppUser, name: string) {
     displayName: user.displayName,
     email: user.email,
     photoURL: user.photoURL ?? null,
-    role: "owner"
+    role: "owner",
+    status: "active"
   };
 
   await setDoc(householdRef, {
@@ -98,6 +127,7 @@ export async function createHousehold(user: AppUser, name: string) {
   });
   await updateDoc(doc(db, "users", user.uid), {
     defaultHouseholdId: householdRef.id,
+    householdIds: arrayUnion(householdRef.id),
     updatedAt: serverTimestamp()
   });
 
@@ -139,14 +169,120 @@ export async function joinHousehold(user: AppUser, inviteCode: string) {
     email: user.email,
     photoURL: user.photoURL ?? null,
     role: "member",
+    status: "active",
     joinedAt: serverTimestamp()
-  });
+  }, { merge: true });
   await updateDoc(doc(db, "users", user.uid), {
     defaultHouseholdId: householdId,
+    householdIds: arrayUnion(householdId),
     updatedAt: serverTimestamp()
   });
 
   return householdId;
+}
+
+export async function switchHousehold(userUid: string, householdId: string) {
+  await updateDoc(doc(db, "users", userUid), {
+    defaultHouseholdId: householdId,
+    householdIds: arrayUnion(householdId),
+    updatedAt: serverTimestamp()
+  });
+}
+
+export async function leaveHousehold(user: AppUser, householdId: string, replacementHouseholdId?: string) {
+  const householdSnapshot = await getDoc(doc(db, "households", householdId));
+  if (!householdSnapshot.exists()) throw new Error("Household not found.");
+
+  const household = withId<Household>(householdSnapshot.id, householdSnapshot.data());
+  if (!household.memberIds.includes(user.uid)) return;
+
+  const memberSnapshots = await Promise.all(
+    household.memberIds.map((uid) => getDoc(doc(db, "households", householdId, "members", uid)))
+  );
+  const activeMembers = memberSnapshots
+    .filter((snapshot) => snapshot.exists())
+    .map((snapshot) => snapshot.data() as HouseholdMember)
+    .filter((member) => member.status !== "left" && member.status !== "removed");
+  const currentMember = activeMembers.find((member) => member.uid === user.uid);
+  const otherOwners = activeMembers.filter((member) => member.uid !== user.uid && member.role === "owner");
+
+  if (activeMembers.length <= 1) {
+    throw new Error("A household needs at least one active member.");
+  }
+  if (currentMember?.role === "owner" && otherOwners.length === 0) {
+    throw new Error("Make another member an owner before leaving.");
+  }
+
+  const nextHouseholdId = replacementHouseholdId || (user.householdIds ?? []).find((id) => id !== householdId) || "";
+  const batch = writeBatch(db);
+  batch.update(doc(db, "households", householdId), {
+    memberIds: arrayRemove(user.uid),
+    updatedAt: serverTimestamp()
+  });
+  batch.set(doc(db, "households", householdId, "members", user.uid), {
+    uid: user.uid,
+    displayName: user.displayName,
+    email: user.email,
+    photoURL: user.photoURL ?? null,
+    role: currentMember?.role ?? "member",
+    status: "left",
+    leftAt: serverTimestamp()
+  }, { merge: true });
+  batch.update(doc(db, "users", user.uid), {
+    householdIds: arrayRemove(householdId),
+    defaultHouseholdId: nextHouseholdId || null,
+    updatedAt: serverTimestamp()
+  });
+  await batch.commit();
+}
+
+export async function removeHouseholdMember(
+  householdId: string,
+  removedUid: string,
+  removedByUid: string
+) {
+  if (removedUid === removedByUid) throw new Error("Use leave household for your own account.");
+
+  const householdSnapshot = await getDoc(doc(db, "households", householdId));
+  if (!householdSnapshot.exists()) throw new Error("Household not found.");
+
+  const household = withId<Household>(householdSnapshot.id, householdSnapshot.data());
+  const memberSnapshots = await Promise.all(
+    household.memberIds.map((uid) => getDoc(doc(db, "households", householdId, "members", uid)))
+  );
+  const activeMembers = memberSnapshots
+    .filter((snapshot) => snapshot.exists())
+    .map((snapshot) => snapshot.data() as HouseholdMember)
+    .filter((member) => member.status !== "left" && member.status !== "removed");
+  const actor = activeMembers.find((member) => member.uid === removedByUid);
+  const removed = activeMembers.find((member) => member.uid === removedUid);
+  const otherOwners = activeMembers.filter((member) => member.uid !== removedUid && member.role === "owner");
+
+  if (actor?.role !== "owner") throw new Error("Only the household owner can remove members.");
+  if (!removed) return;
+  if (activeMembers.length <= 1) throw new Error("A household needs at least one active member.");
+  if (removed.role === "owner" && otherOwners.length === 0) {
+    throw new Error("Make another member an owner before removing this owner.");
+  }
+
+  const batch = writeBatch(db);
+  batch.update(doc(db, "households", householdId), {
+    memberIds: arrayRemove(removedUid),
+    updatedAt: serverTimestamp()
+  });
+  batch.set(doc(db, "households", householdId, "members", removedUid), {
+    status: "removed",
+    leftAt: serverTimestamp(),
+    removedByUid
+  }, { merge: true });
+  await batch.commit();
+}
+
+export async function makeHouseholdOwner(householdId: string, uid: string) {
+  await updateDoc(doc(db, "households", householdId, "members", uid), {
+    role: "owner",
+    status: "active"
+  });
 }
 
 export async function saveExpense(

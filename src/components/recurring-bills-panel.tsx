@@ -23,9 +23,9 @@ import { useToast } from "@/components/ui/toast";
 
 export function RecurringBillsPanel() {
   const { appUser } = useAuth();
-  const { household, members } = useHousehold();
+  const { household, activeMembers } = useHousehold();
   const { language, locale, t } = useLanguage();
-  const { activeRecurringBills } = useRecurringBills(household?.id, members);
+  const { activeRecurringBills } = useRecurringBills(household?.id, activeMembers);
   const { showToast } = useToast();
   const [editingBill, setEditingBill] = useState<RecurringBill | null>(null);
   const [confirmBill, setConfirmBill] = useState<RecurringBill | null>(null);
@@ -35,13 +35,13 @@ export function RecurringBillsPanel() {
     description: editingBill?.description ?? "",
     amount: editingBill ? minorToInput(editingBill.amountMinor) : "",
     category: editingBill?.category ?? "Rent",
-    paidByUid: editingBill?.paidByUid ?? members[0]?.uid ?? "",
+    paidByUid: editingBill?.paidByUid ?? activeMembers[0]?.uid ?? "",
     dayOfMonth: editingBill?.dayOfMonth ?? new Date().getDate(),
     startMonth: editingBill?.startMonth ?? currentMonth(),
     frequencyMonths: editingBill?.frequencyMonths ?? 1,
     active: editingBill?.active ?? true,
     notes: editingBill?.notes ?? ""
-  }), [editingBill, members]);
+  }), [activeMembers, editingBill]);
 
   const form = useForm<RecurringBillFormValues>({
     resolver: zodResolver(recurringBillSchema),
@@ -50,10 +50,10 @@ export function RecurringBillsPanel() {
 
   useEffect(() => {
     const paidByUid = form.getValues("paidByUid");
-    if ((!paidByUid || !members.some((member) => member.uid === paidByUid)) && members[0]) {
-      form.setValue("paidByUid", members[0].uid, { shouldValidate: true });
+    if ((!paidByUid || !activeMembers.some((member) => member.uid === paidByUid)) && activeMembers[0]) {
+      form.setValue("paidByUid", activeMembers[0].uid, { shouldValidate: true });
     }
-  }, [form, members]);
+  }, [activeMembers, form]);
 
   async function submit(values: RecurringBillFormValues) {
     if (!appUser || !household) return;
@@ -63,7 +63,7 @@ export function RecurringBillsPanel() {
       await saveRecurringBill(household.id, appUser.uid, values, editingBill?.id);
       showToast({ title: editingBill ? t("recurring.updated") : t("recurring.added") });
       setEditingBill(null);
-      form.reset(emptyValues(members[0]?.uid));
+      form.reset(emptyValues(activeMembers[0]?.uid));
     } catch (error) {
       showToast({ title: t("recurring.couldNotSave"), message: error instanceof Error ? error.message : t("common.tryAgain"), tone: "error" });
     } finally {
@@ -111,7 +111,7 @@ export function RecurringBillsPanel() {
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label={t("recurring.paidBy")} error={form.formState.errors.paidByUid?.message}>
                 <Select {...form.register("paidByUid")}>
-                  {members.map((member) => <option key={member.uid} value={member.uid}>{member.displayName}</option>)}
+                  {activeMembers.map((member) => <option key={member.uid} value={member.uid}>{member.displayName}</option>)}
                 </Select>
               </Field>
               <Field label={t("recurring.dayOfMonth")} error={form.formState.errors.dayOfMonth?.message}>
@@ -138,7 +138,7 @@ export function RecurringBillsPanel() {
             <Field label={t("common.notes")} error={form.formState.errors.notes?.message}>
               <Textarea placeholder={t("common.optionalNote")} {...form.register("notes")} />
             </Field>
-            <Button type="submit" disabled={submitting || members.length < 2}>
+            <Button type="submit" disabled={submitting || activeMembers.length < 2}>
               <Plus className="h-4 w-4" />
               {submitting ? t("common.saving") : editingBill ? t("common.saveChanges") : t("recurring.add")}
             </Button>
@@ -150,7 +150,7 @@ export function RecurringBillsPanel() {
             <RecurringBillCard
               key={bill.id}
               bill={bill}
-              members={members}
+              members={activeMembers}
               language={language}
               locale={locale}
               onEdit={setEditingBill}
@@ -178,8 +178,8 @@ export function RecurringBillsPanel() {
 }
 
 export function RecurringBillsSummary() {
-  const { household, members } = useHousehold();
-  const { activeRecurringBills } = useRecurringBills(household?.id, members);
+  const { household, activeMembers } = useHousehold();
+  const { activeRecurringBills } = useRecurringBills(household?.id, activeMembers);
   const { locale, t } = useLanguage();
   const visibleBills = activeRecurringBills.slice(0, 3);
 
@@ -187,7 +187,7 @@ export function RecurringBillsSummary() {
     <section className="grid gap-3">
       <SectionHeader title={t("recurring.title")} />
       {visibleBills.length ? visibleBills.map((bill) => {
-        const payer = members.find((member) => member.uid === bill.paidByUid)?.displayName ?? t("common.someone");
+        const payer = activeMembers.find((member) => member.uid === bill.paidByUid)?.displayName ?? t("common.someone");
         return (
           <Card key={bill.id} className="p-3">
             <div className="flex items-start justify-between gap-3">

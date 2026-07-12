@@ -24,7 +24,7 @@ import { useToast } from "@/components/ui/toast";
 
 export default function DashboardPage() {
   const { appUser } = useAuth();
-  const { household, members, partner } = useHousehold();
+  const { household, members, activeMembers, partner } = useHousehold();
   const { locale, t } = useLanguage();
   const { activeExpenses } = useExpenses(household?.id);
   const { activeSettlements } = useSettlements(household?.id);
@@ -45,7 +45,7 @@ export default function DashboardPage() {
     <div className="grid gap-5">
       <SectionHeader
         title={household?.name ?? t("dashboard.title")}
-        subtitle={partner ? t("dashboard.withPartner", { name: partner.displayName }) : t("dashboard.waitingPartner")}
+        subtitle={activeMembers.length > 2 ? t("dashboard.memberCount", { count: activeMembers.length }) : partner ? t("dashboard.withPartner", { name: partner.displayName }) : t("dashboard.waitingPartner")}
         action={<Link href="/app/invite"><Button variant="secondary">{t("dashboard.invite")}</Button></Link>}
       />
       <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">

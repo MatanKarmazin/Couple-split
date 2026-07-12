@@ -17,7 +17,7 @@ import { formatDateLocale, toDate } from "@/lib/dates";
 import { categoryLabel } from "@/lib/i18n";
 
 export default function ExpensesPage() {
-  const { household, members } = useHousehold();
+  const { household, members, activeMembers } = useHousehold();
   const { language, locale, t } = useLanguage();
   const { activeExpenses } = useExpenses(household?.id);
   const [search, setSearch] = useState("");
@@ -67,7 +67,7 @@ export default function ExpensesPage() {
         </Select>
         <Select value={payer} onChange={(event) => setPayer(event.target.value)}>
           <option value="all">{t("expenses.anyPayer")}</option>
-          {members.map((member) => <option key={member.uid} value={member.uid}>{member.displayName}</option>)}
+          {activeMembers.map((member) => <option key={member.uid} value={member.uid}>{member.displayName}</option>)}
         </Select>
         <Input type="month" value={month} onChange={(event) => setMonth(event.target.value)} />
       </Card>

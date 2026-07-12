@@ -23,7 +23,7 @@ import { useToast } from "@/components/ui/toast";
 export default function SettleUpPage() {
   const router = useRouter();
   const { appUser } = useAuth();
-  const { household, members, partner } = useHousehold();
+  const { household, activeMembers, partner } = useHousehold();
   const { t } = useLanguage();
   const { activeExpenses } = useExpenses(household?.id);
   const { activeSettlements } = useSettlements(household?.id);
@@ -72,12 +72,12 @@ export default function SettleUpPage() {
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label={t("settle.from")} error={form.formState.errors.fromUid?.message}>
               <Select {...form.register("fromUid")}>
-                {members.map((member) => <option key={member.uid} value={member.uid}>{member.displayName}</option>)}
+                {activeMembers.map((member) => <option key={member.uid} value={member.uid}>{member.displayName}</option>)}
               </Select>
             </Field>
             <Field label={t("settle.to")} error={form.formState.errors.toUid?.message}>
               <Select {...form.register("toUid")}>
-                {members.map((member) => <option key={member.uid} value={member.uid}>{member.displayName}</option>)}
+                {activeMembers.map((member) => <option key={member.uid} value={member.uid}>{member.displayName}</option>)}
               </Select>
             </Field>
           </div>
@@ -92,7 +92,7 @@ export default function SettleUpPage() {
           <Field label={t("settle.note")} error={form.formState.errors.note?.message}>
             <Textarea placeholder={t("common.optionalNote")} {...form.register("note")} />
           </Field>
-          <Button type="submit" disabled={submitting || members.length < 2}>{submitting ? t("common.saving") : t("settle.record")}</Button>
+          <Button type="submit" disabled={submitting || activeMembers.length < 2}>{submitting ? t("common.saving") : t("settle.record")}</Button>
         </form>
       </Card>
     </div>

@@ -48,7 +48,7 @@ export function ExpenseForm({
       category: initialExpense?.category ?? "Food",
       paidByUid: initialExpense?.paidByUid ?? members[0]?.uid ?? "",
       splitType: initialExpense?.splitType ?? "equal",
-      participants: members.map((member) => member.uid),
+      participants: initialExpense?.participants?.filter((uid) => members.some((member) => member.uid === uid)) ?? members.map((member) => member.uid),
       owedByUid: owedByDefault(initialExpense, members),
       shareAmounts: amountDefaults(initialExpense, members),
       sharePercentages: percentageDefaults(initialExpense, members),
@@ -57,6 +57,7 @@ export function ExpenseForm({
   });
 
   const splitType = watch("splitType");
+  const participants = watch("participants");
   const amount = watch("amount");
   const paidByUid = watch("paidByUid");
   const owedByUid = watch("owedByUid");
@@ -72,29 +73,32 @@ export function ExpenseForm({
         shareAmounts,
         sharePercentages,
         members,
+        participants,
         fallbackName: t("common.someone")
       }),
-    [amount, members, owedByUid, paidByUid, shareAmounts, sharePercentages, splitType, t]
+    [amount, members, owedByUid, paidByUid, participants, shareAmounts, sharePercentages, splitType, t]
+  );
+  const selectedMembers = useMemo(
+    () => members.filter((member) => participants?.includes(member.uid)),
+    [members, participants]
   );
 
   useEffect(() => {
     const memberUids = members.map((member) => member.uid);
     const paidByUid = getValues("paidByUid");
+    const selectedParticipantUids = (getValues("participants") ?? []).filter((uid) => memberUids.includes(uid));
 
-    setValue("participants", memberUids, { shouldValidate: true });
+    setValue("participants", selectedParticipantUids.length ? selectedParticipantUids : memberUids, { shouldValidate: true });
     if (!paidByUid || !memberUids.includes(paidByUid)) {
       setValue("paidByUid", members[0]?.uid ?? "", { shouldValidate: true });
     }
-    if (!getValues("owedByUid") && members[0]) {
+    if ((!getValues("owedByUid") || !memberUids.includes(getValues("owedByUid") ?? "")) && members[0]) {
       setValue("owedByUid", members[0].uid, { shouldValidate: true });
     }
   }, [members, getValues, setValue]);
 
   async function submit(values: ExpenseFormValues) {
-    await onSubmit({
-      ...values,
-      participants: members.map((member) => member.uid)
-    });
+    await onSubmit(values);
   }
 
   return (
@@ -134,10 +138,22 @@ export function ExpenseForm({
           <option value="percentage">{splitTypeLabel(language, "percentage")}</option>
         </Select>
       </Field>
+      <fieldset className="grid gap-2 rounded-lg border border-border bg-surface-muted p-3">
+        <legend className="px-1 text-sm font-bold text-text">{t("expenses.participants")}</legend>
+        <div className="grid gap-2 sm:grid-cols-2">
+          {members.map((member) => (
+            <label key={member.uid} className="flex items-center gap-3 rounded-md bg-surface px-3 py-2 text-sm font-semibold text-text">
+              <input type="checkbox" value={member.uid} {...register("participants")} />
+              {member.displayName}
+            </label>
+          ))}
+        </div>
+        {errors.participants?.message ? <p className="text-xs font-semibold text-danger">{errors.participants.message}</p> : null}
+      </fieldset>
       {splitType === "one_person" ? (
         <Field label={t("expenses.owedBy")} error={errors.owedByUid?.message}>
           <Select {...register("owedByUid")}>
-            {members.map((member) => (
+            {selectedMembers.map((member) => (
               <option key={member.uid} value={member.uid}>{member.displayName}</option>
             ))}
           </Select>
@@ -145,7 +161,7 @@ export function ExpenseForm({
       ) : null}
       {splitType === "amounts" ? (
         <div className="grid gap-4 sm:grid-cols-2">
-          {members.map((member) => (
+          {selectedMembers.map((member) => (
             <Field key={member.uid} label={t("expenses.share", { name: member.displayName })}>
               <Input inputMode="decimal" placeholder="0.00" {...register(`shareAmounts.${member.uid}`)} />
             </Field>
@@ -154,7 +170,7 @@ export function ExpenseForm({
       ) : null}
       {splitType === "percentage" ? (
         <div className="grid gap-4 sm:grid-cols-2">
-          {members.map((member, index) => {
+          {selectedMembers.map((member, index) => {
             return (
               <Field key={member.uid} label={t("expenses.percent", { name: member.displayName })}>
                 <Input
@@ -164,8 +180,8 @@ export function ExpenseForm({
                   onChange={(event) => {
                     const value = Number(event.target.value);
                     setValue(`sharePercentages.${member.uid}`, event.target.value, { shouldValidate: true });
-                    if (members.length === 2 && Number.isFinite(value) && value >= 0 && value <= 100) {
-                      setValue(`sharePercentages.${members[index === 0 ? 1 : 0].uid}`, String(100 - value), { shouldValidate: true });
+                    if (selectedMembers.length === 2 && Number.isFinite(value) && value >= 0 && value <= 100) {
+                      setValue(`sharePercentages.${selectedMembers[index === 0 ? 1 : 0].uid}`, String(100 - value), { shouldValidate: true });
                     }
                   }}
                 />
@@ -208,6 +224,7 @@ function buildSplitPreview({
   shareAmounts,
   sharePercentages,
   members,
+  participants,
   fallbackName
 }: {
   amount: string;
@@ -217,10 +234,11 @@ function buildSplitPreview({
   shareAmounts?: Record<string, string>;
   sharePercentages?: Record<string, string>;
   members: HouseholdMember[];
+  participants: string[];
   fallbackName: string;
 }) {
-  const participants = members.map((member) => member.uid);
   if (!participants.length || !paidByUid) return null;
+  const selectedMembers = members.filter((member) => participants.includes(member.uid));
 
   try {
     const amountMinor = parseMoneyToMinor(amount);
@@ -237,7 +255,7 @@ function buildSplitPreview({
     return {
       amountMinor,
       payerName,
-      shares: members.map((member) => ({
+      shares: selectedMembers.map((member) => ({
         uid: member.uid,
         name: member.displayName,
         amountMinor: shares[member.uid] ?? 0
@@ -264,9 +282,21 @@ function amountDefaults(expense: Expense | undefined, members: HouseholdMember[]
 }
 
 function percentageDefaults(expense: Expense | undefined, members: HouseholdMember[]) {
+  const fallback = equalPercentageDefaults(members);
   return members.reduce<Record<string, string>>((values, member) => {
     const share = expense?.shares[member.uid] ?? 0;
-    values[member.uid] = expense?.amountMinor ? String(Math.round((share / expense.amountMinor) * 100)) : "50";
+    values[member.uid] = expense?.amountMinor ? String(Math.round((share / expense.amountMinor) * 100)) : fallback[member.uid] ?? "";
+    return values;
+  }, {});
+}
+
+function equalPercentageDefaults(members: HouseholdMember[]) {
+  if (!members.length) return {};
+  const base = Math.floor(100 / members.length);
+  let remainder = 100 - base * members.length;
+  return members.reduce<Record<string, string>>((values, member) => {
+    values[member.uid] = String(base + (remainder > 0 ? 1 : 0));
+    remainder -= 1;
     return values;
   }, {});
 }

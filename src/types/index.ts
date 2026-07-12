@@ -15,6 +15,7 @@ export type Category =
 export type SplitType = "equal" | "one_person" | "amounts" | "percentage";
 
 export type MemberRole = "owner" | "member";
+export type MemberStatus = "active" | "left" | "removed";
 
 export type FirestoreDate =
   | Date
@@ -33,6 +34,7 @@ export type AppUser = {
   createdAt?: FirestoreDate;
   updatedAt?: FirestoreDate;
   defaultHouseholdId?: string;
+  householdIds?: string[];
 };
 
 export type Household = {
@@ -52,7 +54,10 @@ export type HouseholdMember = {
   email: string;
   photoURL?: string | null;
   role: MemberRole;
+  status?: MemberStatus;
   joinedAt?: FirestoreDate;
+  leftAt?: FirestoreDate;
+  removedByUid?: string;
 };
 
 export type Expense = {

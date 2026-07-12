@@ -22,7 +22,7 @@ export default function ExpenseDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const { appUser } = useAuth();
-  const { household, members } = useHousehold();
+  const { household, members, activeMembers } = useHousehold();
   const { language, locale, t } = useLanguage();
   const { activeExpenses } = useExpenses(household?.id);
   const { showToast } = useToast();
@@ -57,8 +57,11 @@ export default function ExpenseDetailPage() {
   }
 
   const payer = members.find((member) => member.uid === expense.paidByUid)?.displayName ?? t("common.someone");
-  const shareSummary = members
-    .map((member) => `${member.displayName}: ${formatMoney(expense.shares[member.uid] ?? 0, "ILS", locale)}`)
+  const shareSummary = expense.participants
+    .map((uid) => {
+      const member = members.find((item) => item.uid === uid);
+      return `${member?.displayName ?? uid}: ${formatMoney(expense.shares[uid] ?? 0, "ILS", locale)}`;
+    })
     .join(", ");
 
   return (
@@ -75,7 +78,7 @@ export default function ExpenseDetailPage() {
       />
       {editing ? (
         <Card>
-          <ExpenseForm members={members} initialExpense={expense} onSubmit={update} submitting={submitting} />
+          <ExpenseForm members={activeMembers} initialExpense={expense} onSubmit={update} submitting={submitting} />
         </Card>
       ) : (
         <Card className="grid gap-4">

@@ -14,7 +14,7 @@ import { useToast } from "@/components/ui/toast";
 export default function NewExpensePage() {
   const router = useRouter();
   const { appUser } = useAuth();
-  const { household, members } = useHousehold();
+  const { household, activeMembers } = useHousehold();
   const { t } = useLanguage();
   const { showToast } = useToast();
   const [submitting, setSubmitting] = useState(false);
@@ -37,7 +37,7 @@ export default function NewExpensePage() {
     <div className="grid gap-5">
       <SectionHeader title={t("expenses.addTitle")} subtitle={t("expenses.addSubtitle")} />
       <Card>
-        <ExpenseForm members={members} onSubmit={submit} submitting={submitting} />
+        <ExpenseForm members={activeMembers} onSubmit={submit} submitting={submitting} />
       </Card>
     </div>
   );

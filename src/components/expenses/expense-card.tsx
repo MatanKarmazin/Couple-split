@@ -10,8 +10,11 @@ import type { Expense, HouseholdMember } from "@/types";
 export function ExpenseCard({ expense, members }: { expense: Expense; members: HouseholdMember[] }) {
   const { language, locale, t } = useLanguage();
   const payer = members.find((member) => member.uid === expense.paidByUid)?.displayName ?? t("common.someone");
-  const splitSummary = members
-    .map((member) => `${member.displayName}: ${formatMoney(expense.shares[member.uid] ?? 0, "ILS", locale)}`)
+  const splitSummary = expense.participants
+    .map((uid) => {
+      const member = members.find((item) => item.uid === uid);
+      return `${member?.displayName ?? uid}: ${formatMoney(expense.shares[uid] ?? 0, "ILS", locale)}`;
+    })
     .join(" / ");
 
   return (

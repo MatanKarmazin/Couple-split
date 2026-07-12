@@ -5,7 +5,9 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { CalendarClock, CircleDollarSign, Home, LogOut, Plus, ReceiptText, Settings, WalletCards, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Select } from "@/components/ui/input";
 import { signOutUser } from "@/lib/firebase/auth";
+import { switchHousehold } from "@/lib/firebase/firestore";
 import { useRequireAuth } from "@/hooks/useAuth";
 import { useHousehold } from "@/hooks/useHousehold";
 import { useLanguage } from "@/hooks/useLanguage";
@@ -24,11 +26,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const { appUser, loading } = useRequireAuth();
-  const { household, members, loading: householdLoading } = useHousehold();
+  const { household, households, activeMembers, loading: householdLoading } = useHousehold();
   const { t } = useLanguage();
   const [quickAddOpen, setQuickAddOpen] = useState(false);
-  const needsOnboarding = !household && !householdLoading && pathname !== "/app/onboarding";
-  useRecurringBills(household?.id, members);
+  const needsOnboarding = !household && !householdLoading && households.length === 0 && pathname !== "/app/onboarding";
+  useRecurringBills(household?.id, activeMembers);
 
   useEffect(() => {
     if (needsOnboarding) {
@@ -71,6 +73,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             );
           })}
         </nav>
+        {households.length > 1 ? (
+          <label className="mt-4 grid gap-1.5 text-xs font-bold text-text-muted">
+            {t("settings.switchHousehold")}
+            <Select
+              value={household?.id ?? ""}
+              onChange={(event) => appUser ? void switchHousehold(appUser.uid, event.target.value) : undefined}
+            >
+              {households.map((item) => (
+                <option key={item.id} value={item.id}>{item.name}</option>
+              ))}
+            </Select>
+          </label>
+        ) : null}
         <div className="absolute bottom-4 left-4 right-4">
           <div className="mb-3 flex items-center gap-3 rounded-lg bg-surface-muted p-3">
             {appUser.photoURL ? (

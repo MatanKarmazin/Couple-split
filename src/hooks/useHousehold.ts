@@ -1,16 +1,27 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { listenToHousehold, listenToMembers } from "@/lib/firebase/firestore";
+import { listenToHousehold, listenToHouseholds, listenToMembers, switchHousehold } from "@/lib/firebase/firestore";
 import { useAuth } from "@/hooks/useAuth";
 import type { Household, HouseholdMember } from "@/types";
 
 export function useHousehold() {
   const { appUser } = useAuth();
   const [household, setHousehold] = useState<Household | null>(null);
+  const [households, setHouseholds] = useState<Household[]>([]);
   const [members, setMembers] = useState<HouseholdMember[]>([]);
   const [loading, setLoading] = useState(true);
   const householdId = appUser?.defaultHouseholdId;
+  const householdIds = useMemo(() => appUser?.householdIds ?? (householdId ? [householdId] : []), [appUser?.householdIds, householdId]);
+
+  useEffect(() => {
+    if (!appUser) {
+      setHouseholds([]);
+      return;
+    }
+
+    return listenToHouseholds(householdIds, setHouseholds);
+  }, [appUser, householdIds]);
 
   useEffect(() => {
     setHousehold(null);
@@ -33,10 +44,23 @@ export function useHousehold() {
     };
   }, [householdId]);
 
+  useEffect(() => {
+    if (!appUser || loading || household) return;
+    const fallback = households.find((item) => item.id !== householdId);
+    if (fallback) {
+      void switchHousehold(appUser.uid, fallback.id);
+    }
+  }, [appUser, household, householdId, households, loading]);
+
+  const activeMembers = useMemo(() => {
+    const activeIds = new Set(household?.memberIds ?? []);
+    return members.filter((member) => activeIds.has(member.uid) && member.status !== "left" && member.status !== "removed");
+  }, [household?.memberIds, members]);
+
   const partner = useMemo(
-    () => members.find((member) => member.uid !== appUser?.uid) ?? null,
-    [members, appUser?.uid]
+    () => activeMembers.find((member) => member.uid !== appUser?.uid) ?? null,
+    [activeMembers, appUser?.uid]
   );
 
-  return { household, members, partner, loading };
+  return { household, households, members, activeMembers, partner, loading };
 }

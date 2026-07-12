@@ -1,30 +1,181 @@
 "use client";
 
-import Link from "next/link";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useMemo, useState } from "react";
+import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Card, SectionHeader } from "@/components/ui/card";
-import { Select } from "@/components/ui/input";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { Field, Input, Select } from "@/components/ui/input";
+import { useToast } from "@/components/ui/toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useHousehold } from "@/hooks/useHousehold";
 import { useLanguage, type LanguageMode } from "@/hooks/useLanguage";
 import { useTheme, type ThemeMode } from "@/hooks/useTheme";
 import { signOutUser } from "@/lib/firebase/auth";
+import { createHousehold, joinHousehold, leaveHousehold, makeHouseholdOwner, removeHouseholdMember, switchHousehold } from "@/lib/firebase/firestore";
+import { householdSchema, joinHouseholdSchema, type HouseholdFormValues, type JoinHouseholdFormValues } from "@/lib/validators";
+import type { HouseholdMember } from "@/types";
 
 export default function SettingsPage() {
   const { appUser } = useAuth();
-  const { household, members } = useHousehold();
+  const { household, households, members, activeMembers } = useHousehold();
   const { mode, setMode } = useTheme();
   const { mode: languageMode, setMode: setLanguageMode, t } = useLanguage();
+  const { showToast } = useToast();
+  const [busy, setBusy] = useState(false);
+  const [memberToRemove, setMemberToRemove] = useState<HouseholdMember | null>(null);
+  const [confirmLeave, setConfirmLeave] = useState(false);
+  const currentMember = activeMembers.find((member) => member.uid === appUser?.uid);
+  const isOwner = currentMember?.role === "owner";
+  const createForm = useForm<HouseholdFormValues>({
+    resolver: zodResolver(householdSchema),
+    defaultValues: { name: "" }
+  });
+  const joinForm = useForm<JoinHouseholdFormValues>({
+    resolver: zodResolver(joinHouseholdSchema)
+  });
+  const formerMembers = useMemo(
+    () => members.filter((member) => !activeMembers.some((activeMember) => activeMember.uid === member.uid)),
+    [activeMembers, members]
+  );
+
+  async function create(values: HouseholdFormValues) {
+    if (!appUser) return;
+    setBusy(true);
+    try {
+      await createHousehold(appUser, values.name);
+      createForm.reset({ name: "" });
+      showToast({ title: t("settings.householdCreated") });
+    } catch (error) {
+      showToast({ title: t("onboarding.couldNotCreate"), message: error instanceof Error ? error.message : t("common.tryAgain"), tone: "error" });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function join(values: JoinHouseholdFormValues) {
+    if (!appUser) return;
+    setBusy(true);
+    try {
+      await joinHousehold(appUser, values.inviteCode);
+      joinForm.reset({ inviteCode: "" });
+      showToast({ title: t("onboarding.joined") });
+    } catch (error) {
+      showToast({ title: t("onboarding.couldNotJoin"), message: error instanceof Error ? error.message : t("onboarding.checkCode"), tone: "error" });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function removeMember() {
+    if (!appUser || !household || !memberToRemove) return;
+    setBusy(true);
+    try {
+      await removeHouseholdMember(household.id, memberToRemove.uid, appUser.uid);
+      showToast({ title: t("settings.memberRemoved") });
+      setMemberToRemove(null);
+    } catch (error) {
+      showToast({ title: t("settings.couldNotRemove"), message: error instanceof Error ? error.message : t("common.tryAgain"), tone: "error" });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function makeOwner(member: HouseholdMember) {
+    if (!household) return;
+    setBusy(true);
+    try {
+      await makeHouseholdOwner(household.id, member.uid);
+      showToast({ title: t("settings.ownerUpdated") });
+    } catch (error) {
+      showToast({ title: t("settings.couldNotUpdateOwner"), message: error instanceof Error ? error.message : t("common.tryAgain"), tone: "error" });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function leave() {
+    if (!appUser || !household) return;
+    setBusy(true);
+    try {
+      await leaveHousehold(appUser, household.id);
+      showToast({ title: t("settings.leftHousehold") });
+      setConfirmLeave(false);
+    } catch (error) {
+      showToast({ title: t("settings.couldNotLeave"), message: error instanceof Error ? error.message : t("common.tryAgain"), tone: "error" });
+    } finally {
+      setBusy(false);
+    }
+  }
 
   return (
     <div className="grid gap-5">
       <SectionHeader title={t("settings.title")} subtitle={t("settings.subtitle")} />
       <Card className="grid gap-3">
-        <h2 className="text-base font-bold text-text">{t("common.household")}</h2>
+        <h2 className="text-base font-bold text-text">{t("settings.households")}</h2>
         <Info label={t("onboarding.name")} value={household?.name ?? t("common.notSet")} />
         <Info label={t("common.currency")} value={household?.defaultCurrency ?? "ILS"} />
-        <Info label={t("common.members")} value={members.map((member) => member.displayName).join(", ") || t("settings.onlyYou")} />
-        <Link href="/app/invite"><Button variant="secondary">{t("settings.viewInvite")}</Button></Link>
+        {households.length ? (
+          <label className="grid gap-1.5 text-sm font-medium text-text">
+            <span>{t("settings.switchHousehold")}</span>
+            <Select value={household?.id ?? ""} onChange={(event) => appUser ? void switchHousehold(appUser.uid, event.target.value) : undefined}>
+              {households.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+            </Select>
+          </label>
+        ) : null}
+        <div className="grid gap-4 lg:grid-cols-2">
+          <form className="grid gap-3 rounded-md bg-surface-muted p-3" onSubmit={createForm.handleSubmit(create)}>
+            <h3 className="text-sm font-bold text-text">{t("settings.createHousehold")}</h3>
+            <Field label={t("onboarding.name")} error={createForm.formState.errors.name?.message}>
+              <Input placeholder={t("settings.tripPlaceholder")} {...createForm.register("name")} />
+            </Field>
+            <Button type="submit" disabled={busy}>{t("onboarding.create")}</Button>
+          </form>
+          <form className="grid gap-3 rounded-md bg-surface-muted p-3" onSubmit={joinForm.handleSubmit(join)}>
+            <h3 className="text-sm font-bold text-text">{t("settings.joinAnother")}</h3>
+            <Field label={t("onboarding.inviteCode")} error={joinForm.formState.errors.inviteCode?.message}>
+              <Input placeholder="ABCD123" {...joinForm.register("inviteCode")} />
+            </Field>
+            <Button type="submit" variant="secondary" disabled={busy}>{t("onboarding.join")}</Button>
+          </form>
+        </div>
+      </Card>
+      <Card className="grid gap-3">
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-base font-bold text-text">{t("common.members")}</h2>
+          <Button variant="secondary" onClick={() => navigator.clipboard.writeText(household?.inviteCode ?? "")}>{t("invite.copy")}</Button>
+        </div>
+        <Info label={t("invite.code")} value={household?.inviteCode ?? t("common.notSet")} />
+        <div className="grid gap-2">
+          {activeMembers.map((member) => (
+            <div key={member.uid} className="flex items-center justify-between gap-3 rounded-md bg-surface-muted p-3">
+              <div className="min-w-0">
+                <p className="truncate text-sm font-bold text-text">{member.displayName}</p>
+                <p className="truncate text-xs text-text-muted">{member.email} - {member.role}</p>
+              </div>
+              {isOwner && member.uid !== appUser?.uid ? (
+                <div className="flex flex-wrap justify-end gap-2">
+                  {member.role !== "owner" ? (
+                    <Button variant="secondary" onClick={() => void makeOwner(member)} disabled={busy}>{t("settings.makeOwner")}</Button>
+                  ) : null}
+                  <Button variant="danger" onClick={() => setMemberToRemove(member)} disabled={busy}>{t("settings.removeMember")}</Button>
+                </div>
+              ) : null}
+            </div>
+          ))}
+        </div>
+        {formerMembers.length ? (
+          <div className="grid gap-2">
+            <h3 className="text-sm font-bold text-text-muted">{t("settings.formerMembers")}</h3>
+            {formerMembers.map((member) => (
+              <div key={member.uid} className="rounded-md bg-surface-muted p-3 text-sm text-text-muted">
+                {member.displayName} - {member.status ?? t("common.none")}
+              </div>
+            ))}
+          </div>
+        ) : null}
+        <Button variant="danger" onClick={() => setConfirmLeave(true)} disabled={busy || !household}>{t("settings.leaveHousehold")}</Button>
       </Card>
       <Card className="grid gap-3">
         <h2 className="text-base font-bold text-text">{t("settings.appearance")}</h2>
@@ -50,6 +201,22 @@ export default function SettingsPage() {
         <Info label={t("settings.signedInAs")} value={appUser ? `${appUser.displayName} · ${appUser.email}` : t("common.loading")} />
         <Button variant="danger" onClick={() => void signOutUser()}>{t("nav.signOut")}</Button>
       </Card>
+      <ConfirmDialog
+        open={Boolean(memberToRemove)}
+        title={t("settings.removeMemberTitle")}
+        message={t("settings.removeMemberMessage", { name: memberToRemove?.displayName ?? t("common.someone") })}
+        confirmLabel={t("settings.removeMember")}
+        onCancel={() => setMemberToRemove(null)}
+        onConfirm={() => void removeMember()}
+      />
+      <ConfirmDialog
+        open={confirmLeave}
+        title={t("settings.leaveHouseholdTitle")}
+        message={t("settings.leaveHouseholdMessage")}
+        confirmLabel={t("settings.leaveHousehold")}
+        onCancel={() => setConfirmLeave(false)}
+        onConfirm={() => void leave()}
+      />
     </div>
   );
 }
