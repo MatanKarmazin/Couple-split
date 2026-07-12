@@ -41,7 +41,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen pb-20 md:pb-0">
+    <div className="min-h-screen min-w-0 overflow-x-hidden pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-0">
       <aside className="fixed left-0 top-0 hidden h-screen w-64 border-r border-border bg-surface/85 p-4 backdrop-blur rtl:left-auto rtl:right-0 rtl:border-l rtl:border-r-0 md:block">
         <Link href="/app" className="mb-8 flex items-center gap-3">
           <div className="grid h-10 w-10 place-items-center rounded-lg bg-primary text-white dark:text-background">
@@ -90,9 +90,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </Button>
         </div>
       </aside>
-      <main className="mx-auto w-full max-w-6xl px-4 py-5 md:ml-64 md:px-8 md:py-8 rtl:md:ml-auto rtl:md:mr-64">{children}</main>
+      <main className="mx-auto w-full min-w-0 max-w-6xl overflow-x-hidden px-4 py-5 md:ml-64 md:px-8 md:py-8 rtl:md:ml-auto rtl:md:mr-64">{children}</main>
       {quickAddOpen ? (
-        <div className="fixed bottom-20 left-4 right-4 z-40 grid gap-2 rounded-lg border border-border bg-surface p-3 shadow-soft md:hidden">
+        <div className="fixed inset-x-4 z-40 grid max-w-full gap-2 rounded-lg border border-border bg-surface p-3 shadow-soft md:hidden" style={{ bottom: "calc(5rem + env(safe-area-inset-bottom))" }}>
           <Link href="/app/expenses/new" onClick={() => setQuickAddOpen(false)} className="flex items-center gap-3 rounded-md px-3 py-3 text-sm font-bold text-text hover:bg-surface-muted">
             <Plus className="h-4 w-4 text-primary" />
             {t("quick.addExpense")}
@@ -109,13 +109,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       ) : null}
       <button
         type="button"
-        className="fixed bottom-16 left-1/2 z-50 grid h-14 w-14 -translate-x-1/2 place-items-center rounded-full bg-primary text-white shadow-soft dark:text-background md:hidden"
+        className="fixed inset-x-0 z-50 mx-auto grid h-14 w-14 place-items-center rounded-full bg-primary text-white shadow-soft dark:text-background md:hidden"
+        style={{ bottom: "calc(4rem + env(safe-area-inset-bottom))" }}
         onClick={() => setQuickAddOpen((value) => !value)}
         aria-label={quickAddOpen ? t("common.cancel") : t("nav.add")}
       >
         {quickAddOpen ? <X className="h-6 w-6" /> : <Plus className="h-6 w-6" />}
       </button>
-      <nav className="fixed bottom-0 left-0 right-0 z-30 grid grid-cols-4 border-t border-border bg-surface md:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-4 border-t border-border bg-surface pb-[env(safe-area-inset-bottom)] md:hidden">
         {navItems.filter((item) => item.href !== "/app/expenses/new").map((item) => {
           const Icon = item.icon;
           const active = pathname === item.href;

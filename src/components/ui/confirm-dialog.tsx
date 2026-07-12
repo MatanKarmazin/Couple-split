@@ -22,7 +22,7 @@ export function ConfirmDialog({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-40 grid place-items-center bg-text/45 p-4">
+    <div className="fixed inset-0 z-40 grid max-w-full place-items-center overflow-x-hidden bg-text/45 p-4">
       <div className="w-full max-w-sm rounded-lg border border-border bg-surface p-5 shadow-soft">
         <h2 className="text-lg font-bold text-text">{title}</h2>
         <p className="mt-2 text-sm text-text-muted">{message}</p>

@@ -31,7 +31,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   return (
     <ToastContext.Provider value={value}>
       {children}
-      <div className="fixed bottom-4 left-4 right-4 z-50 grid gap-2 sm:left-auto sm:w-96">
+      <div className="fixed inset-x-4 z-50 grid max-w-full gap-2 sm:left-auto sm:right-4 sm:w-96" style={{ bottom: "calc(1rem + env(safe-area-inset-bottom))" }}>
         {toasts.map((toast) => (
           <div key={toast.id} className="rounded-lg border border-border bg-surface p-3 shadow-soft">
             <div className="flex items-start justify-between gap-3">

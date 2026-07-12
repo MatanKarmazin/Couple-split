@@ -36,6 +36,13 @@
   box-sizing: border-box;
 }
 
+html,
+body {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
 body {
   min-height: 100vh;
   margin: 0;
@@ -43,6 +50,10 @@ body {
     radial-gradient(circle at top left, hsl(var(--accent) / 0.14), transparent 34rem),
     linear-gradient(180deg, hsl(var(--background)) 0%, hsl(var(--surface-muted)) 100%);
   color: hsl(var(--text));
+}
+
+body > * {
+  min-width: 0;
 }
 
 button,
