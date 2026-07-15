@@ -12,7 +12,10 @@ export function useHousehold() {
   const [members, setMembers] = useState<HouseholdMember[]>([]);
   const [loading, setLoading] = useState(true);
   const householdId = appUser?.defaultHouseholdId;
-  const householdIds = useMemo(() => appUser?.householdIds ?? (householdId ? [householdId] : []), [appUser?.householdIds, householdId]);
+  const householdIds = useMemo(() => {
+    const ids = appUser?.householdIds ?? [];
+    return ids.length ? ids : householdId ? [householdId] : [];
+  }, [appUser?.householdIds, householdId]);
 
   useEffect(() => {
     if (!appUser) {

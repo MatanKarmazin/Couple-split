@@ -48,27 +48,27 @@ export default function DashboardPage() {
         subtitle={activeMembers.length > 2 ? t("dashboard.memberCount", { count: activeMembers.length }) : partner ? t("dashboard.withPartner", { name: partner.displayName }) : t("dashboard.waitingPartner")}
         action={<Link href="/app/invite"><Button variant="secondary">{t("dashboard.invite")}</Button></Link>}
       />
-      <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
+      <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
         <BalanceCard balanceMinor={myBalance} />
-        <Card>
-          <p className="text-sm font-semibold text-text-muted">{t("dashboard.monthIn", { name: household?.name ?? t("common.household") })}</p>
-          <p className="mt-2 text-3xl font-bold text-text">{formatMoney(monthTotal, "ILS", locale)}</p>
-          <p className="mt-2 text-sm text-text-muted">{t("dashboard.activeExpenses", { count: activeExpenses.length })}</p>
+        <Card className="min-w-0 overflow-hidden">
+          <p className="break-words text-sm font-semibold text-text-muted">{t("dashboard.monthIn", { name: household?.name ?? t("common.household") })}</p>
+          <p className="mt-2 break-words text-2xl font-bold text-text sm:text-3xl">{formatMoney(monthTotal, "ILS", locale)}</p>
+          <p className="mt-2 break-words text-sm text-text-muted">{t("dashboard.activeExpenses", { count: activeExpenses.length })}</p>
         </Card>
       </div>
-      <div className="grid gap-3 sm:grid-cols-3">
-        <Link href="/app/expenses/new">
-          <Button className="w-full"><Plus className="h-4 w-4" />{t("quick.addExpense")}</Button>
+      <div className="grid min-w-0 gap-3 sm:grid-cols-3">
+        <Link href="/app/expenses/new" className="min-w-0">
+          <Button className="w-full whitespace-normal text-center"><Plus className="h-4 w-4 shrink-0" />{t("quick.addExpense")}</Button>
         </Link>
-        <Link href="/app/expenses#recurring">
-          <Button className="w-full" variant="secondary"><CalendarClock className="h-4 w-4" />{t("quick.addRecurring")}</Button>
+        <Link href="/app/expenses#recurring" className="min-w-0">
+          <Button className="w-full whitespace-normal text-center" variant="secondary"><CalendarClock className="h-4 w-4 shrink-0" />{t("quick.addRecurring")}</Button>
         </Link>
-        <Link href="/app/settle-up">
-          <Button className="w-full" variant="secondary"><WalletCards className="h-4 w-4" />{t("quick.settleUp")}</Button>
+        <Link href="/app/settle-up" className="min-w-0">
+          <Button className="w-full whitespace-normal text-center" variant="secondary"><WalletCards className="h-4 w-4 shrink-0" />{t("quick.settleUp")}</Button>
         </Link>
       </div>
-      <div className="grid gap-5 lg:grid-cols-[1.2fr_0.8fr]">
-        <section className="grid gap-3">
+      <div className="grid min-w-0 gap-5 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
+        <section className="grid min-w-0 gap-3">
           <SectionHeader title={t("dashboard.recentExpenses")} />
           {activeExpenses.slice(0, 5).length ? (
             activeExpenses.slice(0, 5).map((expense) => <ExpenseCard key={expense.id} expense={expense} members={members} />)
@@ -80,23 +80,23 @@ export default function DashboardPage() {
             />
           )}
         </section>
-        <div className="grid content-start gap-5">
+        <div className="grid min-w-0 content-start gap-5">
           <RecurringBillsSummary />
-          <section className="grid content-start gap-3">
+          <section className="grid min-w-0 content-start gap-3">
             <SectionHeader title={t("dashboard.recentSettlements")} />
             {activeSettlements.slice(0, 5).length ? (
               activeSettlements.slice(0, 5).map((settlement) => {
                 const from = members.find((member) => member.uid === settlement.fromUid)?.displayName ?? t("common.someone");
                 const to = members.find((member) => member.uid === settlement.toUid)?.displayName ?? t("common.someoneLower");
                 return (
-                  <Card key={settlement.id} className="p-3">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="text-sm font-bold text-text">{t("dashboard.settlementPaid", { from, to })}</p>
-                        <p className="mt-1 text-sm text-text-muted">{formatMoney(settlement.amountMinor, "ILS", locale)} - {formatDateLocale(settlement.date, locale)}</p>
-                        {settlement.note ? <p className="mt-1 text-xs text-text-muted/80">{settlement.note}</p> : null}
+                  <Card key={settlement.id} className="min-w-0 overflow-hidden p-3">
+                    <div className="flex min-w-0 items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="break-words text-sm font-bold text-text">{t("dashboard.settlementPaid", { from, to })}</p>
+                        <p className="mt-1 break-words text-sm text-text-muted">{formatMoney(settlement.amountMinor, "ILS", locale)} - {formatDateLocale(settlement.date, locale)}</p>
+                        {settlement.note ? <p className="mt-1 break-words text-xs text-text-muted/80">{settlement.note}</p> : null}
                       </div>
-                      <Button variant="ghost" className="h-9 px-2" onClick={() => setSettlementToDelete(settlement)} aria-label={t("dashboard.deleteSettlementTitle")}>
+                      <Button variant="ghost" className="h-9 shrink-0 px-2" onClick={() => setSettlementToDelete(settlement)} aria-label={t("dashboard.deleteSettlementTitle")}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>

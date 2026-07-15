@@ -142,24 +142,24 @@ export default function SettingsPage() {
         </div>
       </Card>
       <Card className="grid gap-3">
-        <div className="flex items-center justify-between gap-3">
-          <h2 className="text-base font-bold text-text">{t("common.members")}</h2>
-          <Button variant="secondary" onClick={() => navigator.clipboard.writeText(household?.inviteCode ?? "")}>{t("invite.copy")}</Button>
+        <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">
+          <h2 className="min-w-0 break-words text-base font-bold text-text">{t("common.members")}</h2>
+          <Button variant="secondary" className="whitespace-normal text-center" onClick={() => navigator.clipboard.writeText(household?.inviteCode ?? "")}>{t("invite.copy")}</Button>
         </div>
         <Info label={t("invite.code")} value={household?.inviteCode ?? t("common.notSet")} />
         <div className="grid gap-2">
           {activeMembers.map((member) => (
-            <div key={member.uid} className="flex items-center justify-between gap-3 rounded-md bg-surface-muted p-3">
+            <div key={member.uid} className="grid min-w-0 gap-3 rounded-md bg-surface-muted p-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
               <div className="min-w-0">
-                <p className="truncate text-sm font-bold text-text">{member.displayName}</p>
-                <p className="truncate text-xs text-text-muted">{member.email} - {member.role}</p>
+                <p className="break-words text-sm font-bold text-text">{member.displayName}</p>
+                <p className="break-words text-xs text-text-muted">{member.email} - {member.role}</p>
               </div>
               {isOwner && member.uid !== appUser?.uid ? (
-                <div className="flex flex-wrap justify-end gap-2">
+                <div className="flex min-w-0 flex-wrap gap-2 sm:justify-end">
                   {member.role !== "owner" ? (
-                    <Button variant="secondary" onClick={() => void makeOwner(member)} disabled={busy}>{t("settings.makeOwner")}</Button>
+                    <Button variant="secondary" className="whitespace-normal text-center" onClick={() => void makeOwner(member)} disabled={busy}>{t("settings.makeOwner")}</Button>
                   ) : null}
-                  <Button variant="danger" onClick={() => setMemberToRemove(member)} disabled={busy}>{t("settings.removeMember")}</Button>
+                  <Button variant="danger" className="whitespace-normal text-center" onClick={() => setMemberToRemove(member)} disabled={busy}>{t("settings.removeMember")}</Button>
                 </div>
               ) : null}
             </div>
@@ -169,7 +169,7 @@ export default function SettingsPage() {
           <div className="grid gap-2">
             <h3 className="text-sm font-bold text-text-muted">{t("settings.formerMembers")}</h3>
             {formerMembers.map((member) => (
-              <div key={member.uid} className="rounded-md bg-surface-muted p-3 text-sm text-text-muted">
+              <div key={member.uid} className="min-w-0 break-words rounded-md bg-surface-muted p-3 text-sm text-text-muted">
                 {member.displayName} - {member.status ?? t("common.none")}
               </div>
             ))}
@@ -223,9 +223,9 @@ export default function SettingsPage() {
 
 function Info({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-md bg-surface-muted p-3">
-      <p className="text-xs font-bold uppercase tracking-wide text-primary">{label}</p>
-      <p className="mt-1 text-sm font-semibold text-text">{value}</p>
+    <div className="min-w-0 overflow-hidden rounded-md bg-surface-muted p-3">
+      <p className="break-words text-xs font-bold uppercase tracking-wide text-primary">{label}</p>
+      <p className="mt-1 break-words text-sm font-semibold text-text">{value}</p>
     </div>
   );
 }

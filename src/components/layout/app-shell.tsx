@@ -29,7 +29,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const { household, households, activeMembers, loading: householdLoading } = useHousehold();
   const { t } = useLanguage();
   const [quickAddOpen, setQuickAddOpen] = useState(false);
-  const needsOnboarding = !household && !householdLoading && households.length === 0 && pathname !== "/app/onboarding";
+  const hasKnownHouseholdId = Boolean(appUser?.defaultHouseholdId || appUser?.householdIds?.length);
+  const needsOnboarding =
+    !loading &&
+    Boolean(appUser) &&
+    !householdLoading &&
+    !household &&
+    !hasKnownHouseholdId &&
+    households.length === 0 &&
+    pathname !== "/app/onboarding";
   useRecurringBills(household?.id, activeMembers);
 
   useEffect(() => {

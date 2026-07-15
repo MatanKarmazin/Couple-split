@@ -193,22 +193,22 @@ export function ExpenseForm({
       <Field label={t("common.notes")} error={errors.notes?.message}>
         <Textarea placeholder={t("common.optionalNote")} {...register("notes")} />
       </Field>
-      <div className="rounded-lg bg-surface-muted p-4">
-        <p className="text-sm font-bold text-text">{t("expenses.splitPreview")}</p>
+      <div className="min-w-0 overflow-hidden rounded-lg bg-surface-muted p-4">
+        <p className="break-words text-sm font-bold text-text">{t("expenses.splitPreview")}</p>
         {splitPreview ? (
-          <div className="mt-2 grid gap-2 text-sm text-text-muted">
-            <p>{t("expenses.previewPays", { name: splitPreview.payerName, amount: formatMoney(splitPreview.amountMinor, "ILS", locale) })}</p>
+          <div className="mt-2 grid min-w-0 gap-2 text-sm text-text-muted">
+            <p className="break-words">{t("expenses.previewPays", { name: splitPreview.payerName, amount: formatMoney(splitPreview.amountMinor, "ILS", locale) })}</p>
             <div className="grid gap-1">
               {splitPreview.shares.map((share) => (
-                <div key={share.uid} className="flex items-center justify-between gap-3 rounded-md bg-surface/70 px-3 py-2">
-                  <span className="font-semibold text-text">{share.name}</span>
-                  <span>{formatMoney(share.amountMinor, "ILS", locale)}</span>
+                <div key={share.uid} className="grid min-w-0 gap-1 rounded-md bg-surface/70 px-3 py-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+                  <span className="break-words font-semibold text-text">{share.name}</span>
+                  <span className="break-words sm:text-right">{formatMoney(share.amountMinor, "ILS", locale)}</span>
                 </div>
               ))}
             </div>
           </div>
         ) : (
-          <p className="mt-1 text-sm text-text-muted">{t("expenses.previewEmpty")}</p>
+          <p className="mt-1 break-words text-sm text-text-muted">{t("expenses.previewEmpty")}</p>
         )}
       </div>
       <Button type="submit" disabled={submitting}>{submitting ? t("common.saving") : t("expenses.save")}</Button>

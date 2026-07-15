@@ -88,11 +88,11 @@ export function RecurringBillsPanel() {
   return (
     <section id="recurring" className="scroll-mt-6 grid gap-4">
       <SectionHeader title={t("recurring.title")} subtitle={t("recurring.subtitle")} />
-      <div className="grid gap-5 lg:grid-cols-[0.95fr_1.05fr]">
-        <Card>
+      <div className="grid min-w-0 gap-5 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
+        <Card className="min-w-0 overflow-hidden">
           <form className="grid gap-4" onSubmit={form.handleSubmit(submit)}>
-            <div className="flex items-center justify-between gap-3">
-              <h2 className="text-base font-bold text-text">{editingBill ? t("recurring.edit") : t("recurring.add")}</h2>
+            <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">
+              <h2 className="min-w-0 break-words text-base font-bold text-text">{editingBill ? t("recurring.edit") : t("recurring.add")}</h2>
               {editingBill ? <Button variant="ghost" onClick={() => setEditingBill(null)}>{t("common.cancel")}</Button> : null}
             </div>
             <Field label={t("expenses.description")} error={form.formState.errors.description?.message}>
@@ -145,7 +145,7 @@ export function RecurringBillsPanel() {
           </form>
         </Card>
 
-        <section className="grid content-start gap-3">
+        <section className="grid min-w-0 content-start gap-3">
           {activeRecurringBills.length ? activeRecurringBills.map((bill) => (
             <RecurringBillCard
               key={bill.id}
@@ -189,18 +189,18 @@ export function RecurringBillsSummary() {
       {visibleBills.length ? visibleBills.map((bill) => {
         const payer = activeMembers.find((member) => member.uid === bill.paidByUid)?.displayName ?? t("common.someone");
         return (
-          <Card key={bill.id} className="p-3">
-            <div className="flex items-start justify-between gap-3">
+          <Card key={bill.id} className="min-w-0 overflow-hidden p-3">
+            <div className="grid min-w-0 gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
               <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-2">
-                  <p className="truncate text-sm font-bold text-text">{bill.description}</p>
-                  <Badge>{bill.active ? t("recurring.activeBadge") : t("recurring.pausedBadge")}</Badge>
+                <div className="flex min-w-0 flex-wrap items-center gap-2">
+                  <p className="min-w-0 break-words text-sm font-bold text-text">{bill.description}</p>
+                  <Badge className="shrink-0">{bill.active ? t("recurring.activeBadge") : t("recurring.pausedBadge")}</Badge>
                 </div>
-                <p className="mt-1 text-xs text-text-muted">
+                <p className="mt-1 break-words text-xs text-text-muted">
                   {t("recurring.nextLine", { payer, frequency: frequencyLabel(bill, t), date: formatDateLocale(nextDueDate(bill), locale) })}
                 </p>
               </div>
-              <p className="shrink-0 text-sm font-bold text-text">{formatMoney(bill.amountMinor, "ILS", locale)}</p>
+              <p className="break-words text-sm font-bold text-text sm:text-right">{formatMoney(bill.amountMinor, "ILS", locale)}</p>
             </div>
           </Card>
         );
@@ -232,23 +232,23 @@ function RecurringBillCard({
   const payer = members.find((member) => member.uid === bill.paidByUid)?.displayName ?? t("common.someone");
 
   return (
-    <Card className="grid gap-3">
-      <div className="flex items-start justify-between gap-3">
+    <Card className="grid min-w-0 gap-3 overflow-hidden">
+      <div className="grid min-w-0 gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
         <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <h2 className="truncate text-sm font-bold text-text">{bill.description}</h2>
-            <Badge>{bill.active ? t("recurring.activeBadge") : t("recurring.pausedBadge")}</Badge>
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <h2 className="min-w-0 break-words text-sm font-bold text-text">{bill.description}</h2>
+            <Badge className="shrink-0">{bill.active ? t("recurring.activeBadge") : t("recurring.pausedBadge")}</Badge>
           </div>
-          <p className="mt-1 text-xs text-text-muted">
+          <p className="mt-1 break-words text-xs text-text-muted">
             {t("recurring.nextLine", { payer, frequency: frequencyLabel(bill, t), date: formatDateLocale(nextDueDate(bill), locale) })}
           </p>
         </div>
-        <div className="text-right">
-          <p className="text-sm font-bold text-text">{formatMoney(bill.amountMinor, "ILS", locale)}</p>
-          <p className="mt-1 text-xs text-text-muted">{categoryLabel(language, bill.category)}</p>
+        <div className="min-w-0 sm:text-right">
+          <p className="break-words text-sm font-bold text-text">{formatMoney(bill.amountMinor, "ILS", locale)}</p>
+          <p className="mt-1 break-words text-xs text-text-muted">{categoryLabel(language, bill.category)}</p>
         </div>
       </div>
-      {bill.notes ? <p className="text-sm text-text-muted">{bill.notes}</p> : null}
+      {bill.notes ? <p className="break-words text-sm text-text-muted">{bill.notes}</p> : null}
       <div className="flex flex-wrap gap-2">
         <Button variant="secondary" onClick={() => onEdit(bill)}><Pencil className="h-4 w-4" />{t("common.edit")}</Button>
         <Button variant="secondary" onClick={() => void onToggle(bill)}><Power className="h-4 w-4" />{bill.active ? t("recurring.pause") : t("recurring.resume")}</Button>
