@@ -404,6 +404,7 @@ export async function materializeDueRecurringExpenses(
   if (!memberUids.length) return;
 
   for (const bill of bills.filter((item) => item.active && !item.deletedAt)) {
+    if (bill.householdId !== householdId) continue;
     if (!memberUids.includes(bill.paidByUid)) continue;
 
     for (const month of dueMonths(bill.startMonth, today, bill.frequencyMonths ?? 1)) {
@@ -412,6 +413,12 @@ export async function materializeDueRecurringExpenses(
 
       const recurringOccurrenceKey = `${bill.id}_${month}`;
       const expenseRef = doc(db, "households", householdId, "expenses", recurringOccurrenceKey);
+      const billRef = doc(db, "households", householdId, "recurringBills", bill.id);
+      const billSnapshot = await getDoc(billRef);
+      if (!billSnapshot.exists()) continue;
+      const latestBill = billSnapshot.data() as RecurringBill;
+      if (latestBill.householdId !== householdId || latestBill.deletedAt || !latestBill.active) continue;
+
       const existingExpense = await getDoc(expenseRef);
       if (existingExpense.exists()) continue;
 

@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { Plus } from "lucide-react";
 import { ExpenseCard } from "@/components/expenses/expense-card";
-import { RecurringBillsPanel } from "@/components/recurring-bills-panel";
 import { Button } from "@/components/ui/button";
 import { Card, SectionHeader } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -58,7 +57,6 @@ export default function ExpensesPage() {
         subtitle={t("expenses.subtitle", { household: household?.name ?? t("common.household"), count: filtered.length })}
         action={<Link href="/app/expenses/new"><Button><Plus className="h-4 w-4" />{t("nav.add")}</Button></Link>}
       />
-      <RecurringBillsPanel />
       <Card className="grid gap-3 md:grid-cols-4">
         <Input placeholder={t("expenses.search")} value={search} onChange={(event) => setSearch(event.target.value)} />
         <Select value={category} onChange={(event) => setCategory(event.target.value)}>

@@ -9,6 +9,7 @@ export function useSettlements(householdId?: string) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let cancelled = false;
     setSettlements([]);
     if (!householdId) {
       setLoading(false);
@@ -16,12 +17,21 @@ export function useSettlements(householdId?: string) {
     }
 
     setLoading(true);
-    return listenToSettlements(householdId, (items) => {
-      setSettlements(items);
+    const unsubscribe = listenToSettlements(householdId, (items) => {
+      if (cancelled) return;
+      setSettlements(items.filter((settlement) => settlement.householdId === householdId));
       setLoading(false);
     });
+
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
   }, [householdId]);
 
-  const activeSettlements = useMemo(() => settlements.filter((settlement) => !settlement.deletedAt), [settlements]);
+  const activeSettlements = useMemo(
+    () => settlements.filter((settlement) => !settlement.deletedAt && settlement.householdId === householdId),
+    [householdId, settlements]
+  );
   return { settlements, activeSettlements, loading };
 }

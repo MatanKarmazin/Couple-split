@@ -60,7 +60,7 @@ export default function DashboardPage() {
         <Link href="/app/expenses/new" className="min-w-0">
           <Button className="w-full whitespace-normal text-center"><Plus className="h-4 w-4 shrink-0" />{t("quick.addExpense")}</Button>
         </Link>
-        <Link href="/app/expenses#recurring" className="min-w-0">
+        <Link href="/app/expenses/new?mode=recurring" className="min-w-0">
           <Button className="w-full whitespace-normal text-center" variant="secondary"><CalendarClock className="h-4 w-4 shrink-0" />{t("quick.addRecurring")}</Button>
         </Link>
         <Link href="/app/settle-up" className="min-w-0">

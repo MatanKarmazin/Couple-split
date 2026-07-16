@@ -21,7 +21,7 @@ import { categories, recurringBillSchema, type RecurringBillFormValues } from "@
 import type { HouseholdMember, RecurringBill } from "@/types";
 import { useToast } from "@/components/ui/toast";
 
-export function RecurringBillsPanel() {
+export function RecurringBillsPanel({ showHeader = true }: { showHeader?: boolean }) {
   const { appUser } = useAuth();
   const { household, activeMembers } = useHousehold();
   const { language, locale, t } = useLanguage();
@@ -87,7 +87,7 @@ export function RecurringBillsPanel() {
 
   return (
     <section id="recurring" className="scroll-mt-6 grid gap-4">
-      <SectionHeader title={t("recurring.title")} subtitle={t("recurring.subtitle")} />
+      {showHeader ? <SectionHeader title={t("recurring.title")} subtitle={t("recurring.subtitle")} /> : null}
       <div className="grid min-w-0 gap-5 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
         <Card className="min-w-0 overflow-hidden">
           <form className="grid gap-4" onSubmit={form.handleSubmit(submit)}>

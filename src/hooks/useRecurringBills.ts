@@ -11,6 +11,7 @@ export function useRecurringBills(householdId?: string, members: HouseholdMember
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let cancelled = false;
     setRecurringBills([]);
     if (!householdId) {
       setLoading(false);
@@ -18,20 +19,27 @@ export function useRecurringBills(householdId?: string, members: HouseholdMember
     }
 
     setLoading(true);
-    return listenToRecurringBills(householdId, (items) => {
-      setRecurringBills(items);
+    const unsubscribe = listenToRecurringBills(householdId, (items) => {
+      if (cancelled) return;
+      setRecurringBills(items.filter((bill) => bill.householdId === householdId));
       setLoading(false);
     });
+
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
   }, [householdId]);
 
   const activeRecurringBills = useMemo(
-    () => recurringBills.filter((bill) => !bill.deletedAt),
-    [recurringBills]
+    () => recurringBills.filter((bill) => !bill.deletedAt && bill.householdId === householdId),
+    [householdId, recurringBills]
   );
 
   useEffect(() => {
     if (!householdId || !appUser || members.length === 0 || loading) return;
-    void materializeDueRecurringExpenses(householdId, appUser.uid, members, activeRecurringBills);
+    const safeBills = activeRecurringBills.filter((bill) => bill.householdId === householdId);
+    void materializeDueRecurringExpenses(householdId, appUser.uid, members, safeBills);
   }, [activeRecurringBills, appUser, householdId, loading, members]);
 
   return { recurringBills, activeRecurringBills, loading };

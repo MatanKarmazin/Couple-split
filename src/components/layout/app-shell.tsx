@@ -120,7 +120,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <Plus className="h-4 w-4 text-primary" />
             {t("quick.addExpense")}
           </Link>
-          <Link href="/app/expenses#recurring" onClick={() => setQuickAddOpen(false)} className="flex items-center gap-3 rounded-md px-3 py-3 text-sm font-bold text-text hover:bg-surface-muted">
+          <Link href="/app/expenses/new?mode=recurring" onClick={() => setQuickAddOpen(false)} className="flex items-center gap-3 rounded-md px-3 py-3 text-sm font-bold text-text hover:bg-surface-muted">
             <CalendarClock className="h-4 w-4 text-primary" />
             {t("quick.addRecurring")}
           </Link>
