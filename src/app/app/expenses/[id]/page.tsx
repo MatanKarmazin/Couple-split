@@ -1,6 +1,6 @@
 "use client";
 
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 import { Pencil, Trash2 } from "lucide-react";
 import { ExpenseForm } from "@/components/expenses/expense-form";
@@ -15,12 +15,14 @@ import { formatDateLocale } from "@/lib/dates";
 import { softDeleteExpense, saveExpense } from "@/lib/firebase/firestore";
 import { categoryLabel, splitTypeLabel } from "@/lib/i18n";
 import { formatMoney } from "@/lib/money";
+import { safeAppReturnTo } from "@/lib/navigation";
 import type { ExpenseFormValues } from "@/lib/validators";
 import { useToast } from "@/components/ui/toast";
 
 export default function ExpenseDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { appUser } = useAuth();
   const { household, members, activeMembers } = useHousehold();
   const { language, locale, t } = useLanguage();
@@ -30,6 +32,7 @@ export default function ExpenseDetailPage() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const expense = useMemo(() => activeExpenses.find((item) => item.id === id), [activeExpenses, id]);
+  const returnTo = safeAppReturnTo(searchParams.get("returnTo"), "/app/expenses", `/app/expenses/${id}`);
 
   async function update(values: ExpenseFormValues) {
     if (!appUser || !household || !expense) return;
@@ -49,7 +52,7 @@ export default function ExpenseDetailPage() {
     if (!household || !expense) return;
     await softDeleteExpense(household.id, expense.id);
     showToast({ title: t("expenses.deleted") });
-    router.push("/app/expenses");
+    router.push(returnTo);
   }
 
   if (!expense) {

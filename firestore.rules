@@ -93,6 +93,13 @@ service cloud.firestore {
         && request.resource.data.inviteCode == resource.data.inviteCode;
     }
 
+    function validSoloHouseholdDelete(householdId) {
+      return signedIn()
+        && householdData(householdId).memberIds is list
+        && householdData(householdId).memberIds.size() == 1
+        && request.auth.uid in householdData(householdId).memberIds;
+    }
+
     function validExpenseParticipants(householdId) {
       return request.resource.data.participants is list
         && request.resource.data.participants.size() >= 1
@@ -267,7 +274,10 @@ service cloud.firestore {
       allow get: if signedIn();
       allow list: if false;
       allow create: if validInviteCreate(inviteCode);
-      allow update, delete: if false;
+      allow update: if false;
+      allow delete: if resource.data.householdId is string
+        && householdData(resource.data.householdId).inviteCode == inviteCode
+        && validSoloHouseholdDelete(resource.data.householdId);
 
       match /joins/{uid} {
         allow create: if validJoinProofCreate(inviteCode, uid);
@@ -284,7 +294,7 @@ service cloud.firestore {
         || validHouseholdJoin(householdId)
         || validHouseholdLeave(householdId)
         || validHouseholdMemberRemove(householdId);
-      allow delete: if false;
+      allow delete: if validSoloHouseholdDelete(householdId);
 
       match /members/{uid} {
         allow read: if isHouseholdMember(householdId);
@@ -294,7 +304,7 @@ service cloud.firestore {
           && request.resource.data.uid == request.auth.uid;
         allow update: if (isSelf(uid) && isHouseholdMember(householdId))
           || isHouseholdOwner(householdId);
-        allow delete: if false;
+        allow delete: if validSoloHouseholdDelete(householdId);
       }
 
       match /expenses/{expenseId} {
@@ -310,7 +320,7 @@ service cloud.firestore {
             && validExpenseParticipants(householdId)
             && validExpenseShares(householdId)
           );
-        allow delete: if false;
+        allow delete: if validSoloHouseholdDelete(householdId);
       }
 
       match /recurringBills/{recurringBillId} {
@@ -322,7 +332,7 @@ service cloud.firestore {
             validRecurringBillWrite(householdId)
             && request.resource.data.createdByUid == resource.data.createdByUid
           );
-        allow delete: if false;
+        allow delete: if validSoloHouseholdDelete(householdId);
       }
 
       match /installmentPlans/{installmentPlanId} {
@@ -334,14 +344,14 @@ service cloud.firestore {
             validInstallmentPlanWrite(householdId)
             && request.resource.data.createdByUid == resource.data.createdByUid
           );
-        allow delete: if false;
+        allow delete: if validSoloHouseholdDelete(householdId);
       }
 
       match /settlements/{settlementId} {
         allow read: if isHouseholdMember(householdId);
         allow create: if validSettlementCreate(householdId);
         allow update: if validSettlementSoftDelete(householdId);
-        allow delete: if false;
+        allow delete: if validSoloHouseholdDelete(householdId);
       }
     }
   }

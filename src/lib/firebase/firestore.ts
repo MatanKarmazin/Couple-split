@@ -5,6 +5,7 @@ import {
   collection,
   doc,
   getDoc,
+  getDocs,
   onSnapshot,
   orderBy,
   query,
@@ -12,6 +13,7 @@ import {
   setDoc,
   updateDoc,
   writeBatch,
+  type DocumentReference,
   type Unsubscribe
 } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
@@ -214,7 +216,8 @@ export async function leaveHousehold(user: AppUser, householdId: string, replace
   const otherOwners = activeMembers.filter((member) => member.uid !== user.uid && member.role === "owner");
 
   if (activeMembers.length <= 1) {
-    throw new Error("A household needs at least one active member.");
+    await deleteSoloHousehold(user, household, replacementHouseholdId);
+    return "deleted";
   }
   if (currentMember?.role === "owner" && otherOwners.length === 0) {
     throw new Error("Make another member an owner before leaving.");
@@ -241,6 +244,47 @@ export async function leaveHousehold(user: AppUser, householdId: string, replace
     updatedAt: serverTimestamp()
   });
   await batch.commit();
+  return "left";
+}
+
+async function deleteSoloHousehold(user: AppUser, household: Household, replacementHouseholdId?: string) {
+  if (household.memberIds.length !== 1 || household.memberIds[0] !== user.uid) {
+    throw new Error("Only the last active member can delete this household.");
+  }
+
+  const householdId = household.id;
+  const childCollections = ["expenses", "settlements", "recurringBills", "installmentPlans", "members"];
+
+  for (const collectionName of childCollections) {
+    const snapshot = await getDocs(collection(db, "households", householdId, collectionName));
+    await deleteRefsInBatches(snapshot.docs.map((item) => item.ref));
+  }
+
+  const nextHouseholdId = replacementHouseholdId || (user.householdIds ?? []).find((id) => id !== householdId) || "";
+  const batch = writeBatch(db);
+  const inviteRef = doc(db, "inviteCodes", household.inviteCode);
+  const inviteSnapshot = await getDoc(inviteRef);
+
+  if (inviteSnapshot.exists()) {
+    batch.delete(inviteRef);
+  }
+  batch.update(doc(db, "users", user.uid), {
+    householdIds: arrayRemove(householdId),
+    defaultHouseholdId: nextHouseholdId || null,
+    updatedAt: serverTimestamp()
+  });
+  batch.delete(doc(db, "households", householdId));
+  await batch.commit();
+}
+
+async function deleteRefsInBatches(refs: DocumentReference[]) {
+  const chunkSize = 450;
+
+  for (let index = 0; index < refs.length; index += chunkSize) {
+    const batch = writeBatch(db);
+    refs.slice(index, index + chunkSize).forEach((ref) => batch.delete(ref));
+    await batch.commit();
+  }
 }
 
 export async function removeHouseholdMember(

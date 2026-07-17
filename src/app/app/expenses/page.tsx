@@ -55,7 +55,7 @@ export default function ExpensesPage() {
       <SectionHeader
         title={t("expenses.title")}
         subtitle={t("expenses.subtitle", { household: household?.name ?? t("common.household"), count: filtered.length })}
-        action={<Link href="/app/expenses/new"><Button><Plus className="h-4 w-4" />{t("nav.add")}</Button></Link>}
+        action={<Link href="/app/expenses/new?returnTo=%2Fapp%2Fexpenses"><Button><Plus className="h-4 w-4" />{t("nav.add")}</Button></Link>}
       />
       <Card className="grid gap-3 md:grid-cols-4">
         <Input placeholder={t("expenses.search")} value={search} onChange={(event) => setSearch(event.target.value)} />
@@ -81,7 +81,7 @@ export default function ExpensesPage() {
           <EmptyState
             title={activeExpenses.length ? t("expenses.noMatchTitle") : t("dashboard.noExpensesTitle")}
             message={activeExpenses.length ? t("expenses.noMatchMessage") : t("dashboard.noExpensesMessage")}
-            action={!activeExpenses.length ? <Link href="/app/expenses/new"><Button>{t("quick.addExpense")}</Button></Link> : null}
+            action={!activeExpenses.length ? <Link href="/app/expenses/new?returnTo=%2Fapp%2Fexpenses"><Button>{t("quick.addExpense")}</Button></Link> : null}
           />
         )}
       </div>

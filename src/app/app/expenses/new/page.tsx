@@ -12,6 +12,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useHousehold } from "@/hooks/useHousehold";
 import { useLanguage } from "@/hooks/useLanguage";
 import { saveExpense } from "@/lib/firebase/firestore";
+import { safeAppReturnTo, withReturnTo } from "@/lib/navigation";
 import type { ExpenseFormValues } from "@/lib/validators";
 import { useToast } from "@/components/ui/toast";
 
@@ -32,6 +33,7 @@ function NewExpenseContent() {
   const { showToast } = useToast();
   const [submitting, setSubmitting] = useState(false);
   const mode = searchParams.get("mode") === "recurring" ? "recurring" : "expense";
+  const returnTo = safeAppReturnTo(searchParams.get("returnTo"), "/app/expenses", "/app/expenses/new");
 
   async function submit(values: ExpenseFormValues) {
     if (!appUser || !household) return;
@@ -39,7 +41,7 @@ function NewExpenseContent() {
     try {
       await saveExpense(household.id, appUser.uid, values);
       showToast({ title: t("expenses.added") });
-      router.push("/app/expenses");
+      router.push(returnTo);
     } catch (error) {
       showToast({ title: t("expenses.couldNotSave"), message: error instanceof Error ? error.message : t("common.tryAgain"), tone: "error" });
     } finally {
@@ -57,7 +59,7 @@ function NewExpenseContent() {
         <Button
           variant={mode === "expense" ? "primary" : "ghost"}
           className="w-full whitespace-normal text-center"
-          onClick={() => router.replace("/app/expenses/new")}
+          onClick={() => router.replace(withReturnTo("/app/expenses/new", returnTo))}
         >
           <ReceiptText className="h-4 w-4 shrink-0" />
           {t("quick.addExpense")}
@@ -65,7 +67,7 @@ function NewExpenseContent() {
         <Button
           variant={mode === "recurring" ? "primary" : "ghost"}
           className="w-full whitespace-normal text-center"
-          onClick={() => router.replace("/app/expenses/new?mode=recurring")}
+          onClick={() => router.replace(withReturnTo("/app/expenses/new?mode=recurring", returnTo))}
         >
           <CalendarClock className="h-4 w-4 shrink-0" />
           {t("quick.addRecurring")}

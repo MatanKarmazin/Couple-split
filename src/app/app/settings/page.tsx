@@ -28,6 +28,7 @@ export default function SettingsPage() {
   const [confirmLeave, setConfirmLeave] = useState(false);
   const currentMember = activeMembers.find((member) => member.uid === appUser?.uid);
   const isOwner = currentMember?.role === "owner";
+  const isSoloHousehold = activeMembers.length <= 1;
   const createForm = useForm<HouseholdFormValues>({
     resolver: zodResolver(householdSchema),
     defaultValues: { name: "" }
@@ -99,8 +100,8 @@ export default function SettingsPage() {
     if (!appUser || !household) return;
     setBusy(true);
     try {
-      await leaveHousehold(appUser, household.id);
-      showToast({ title: t("settings.leftHousehold") });
+      const result = await leaveHousehold(appUser, household.id);
+      showToast({ title: result === "deleted" ? t("settings.householdDeleted") : t("settings.leftHousehold") });
       setConfirmLeave(false);
     } catch (error) {
       showToast({ title: t("settings.couldNotLeave"), message: error instanceof Error ? error.message : t("common.tryAgain"), tone: "error" });
@@ -211,9 +212,9 @@ export default function SettingsPage() {
       />
       <ConfirmDialog
         open={confirmLeave}
-        title={t("settings.leaveHouseholdTitle")}
-        message={t("settings.leaveHouseholdMessage")}
-        confirmLabel={t("settings.leaveHousehold")}
+        title={isSoloHousehold ? t("settings.deleteHouseholdTitle") : t("settings.leaveHouseholdTitle")}
+        message={isSoloHousehold ? t("settings.deleteHouseholdMessage") : t("settings.leaveHouseholdMessage")}
+        confirmLabel={isSoloHousehold ? t("common.delete") : t("settings.leaveHousehold")}
         onCancel={() => setConfirmLeave(false)}
         onConfirm={() => void leave()}
       />

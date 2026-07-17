@@ -13,6 +13,7 @@ import { useHousehold } from "@/hooks/useHousehold";
 import { useLanguage } from "@/hooks/useLanguage";
 import { useInstallmentPlans } from "@/hooks/useInstallmentPlans";
 import { useRecurringBills } from "@/hooks/useRecurringBills";
+import { safeAppReturnTo, withReturnTo } from "@/lib/navigation";
 import { cn } from "@/lib/utils";
 
 const navItems = [
@@ -30,6 +31,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const { household, households, activeMembers, loading: householdLoading } = useHousehold();
   const { t } = useLanguage();
   const [quickAddOpen, setQuickAddOpen] = useState(false);
+  const quickAddReturnTo = safeAppReturnTo(pathname, "/app/expenses", "/app/expenses/new");
   const hasKnownHouseholdId = Boolean(appUser?.defaultHouseholdId || appUser?.householdIds?.length);
   const needsOnboarding =
     !loading &&
@@ -118,7 +120,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <main className="mx-auto w-full min-w-0 max-w-6xl overflow-x-hidden px-4 py-5 md:ml-64 md:px-8 md:py-8 rtl:md:ml-auto rtl:md:mr-64">{children}</main>
       {quickAddOpen ? (
         <div className="fixed inset-x-4 z-40 grid max-w-full gap-2 rounded-lg border border-border bg-surface p-3 shadow-soft md:hidden" style={{ bottom: "calc(5rem + env(safe-area-inset-bottom))" }}>
-          <Link href="/app/expenses/new" onClick={() => setQuickAddOpen(false)} className="flex items-center gap-3 rounded-md px-3 py-3 text-sm font-bold text-text hover:bg-surface-muted">
+          <Link href={withReturnTo("/app/expenses/new", quickAddReturnTo)} onClick={() => setQuickAddOpen(false)} className="flex items-center gap-3 rounded-md px-3 py-3 text-sm font-bold text-text hover:bg-surface-muted">
             <Plus className="h-4 w-4 text-primary" />
             {t("quick.addExpense")}
           </Link>

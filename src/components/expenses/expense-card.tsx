@@ -1,14 +1,18 @@
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { CategoryIcon } from "@/components/expenses/category-icon";
 import { useLanguage } from "@/hooks/useLanguage";
 import { formatDateLocale } from "@/lib/dates";
 import { categoryLabel, shortSplitTypeLabel } from "@/lib/i18n";
 import { formatMoney } from "@/lib/money";
+import { safeAppReturnTo, withReturnTo } from "@/lib/navigation";
 import type { Expense, HouseholdMember } from "@/types";
 
 export function ExpenseCard({ expense, members }: { expense: Expense; members: HouseholdMember[] }) {
+  const pathname = usePathname();
   const { language, locale, t } = useLanguage();
+  const returnTo = safeAppReturnTo(pathname, "/app/expenses", `/app/expenses/${expense.id}`);
   const payer = members.find((member) => member.uid === expense.paidByUid)?.displayName ?? t("common.someone");
   const participantCount = expense.participants.length;
   const compactSplitSummary = `${shortSplitTypeLabel(language, expense.splitType)} - ${participantCount} ${participantCount === 1 ? "person" : "people"}`;
@@ -20,7 +24,7 @@ export function ExpenseCard({ expense, members }: { expense: Expense; members: H
     .join(" / ");
 
   return (
-    <Link href={`/app/expenses/${expense.id}`} className="block w-full min-w-0 overflow-hidden rounded-lg border border-border bg-surface p-4 shadow-soft transition hover:-translate-y-0.5">
+    <Link href={withReturnTo(`/app/expenses/${expense.id}`, returnTo)} className="block w-full min-w-0 overflow-hidden rounded-lg border border-border bg-surface p-4 shadow-soft transition hover:-translate-y-0.5">
       <div className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] gap-3 sm:grid-cols-[auto_minmax(0,1fr)_auto]">
         <div className="row-span-2 grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-surface-muted text-primary sm:row-span-1">
           <CategoryIcon category={expense.category} />

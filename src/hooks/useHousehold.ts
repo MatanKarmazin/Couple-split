@@ -57,8 +57,15 @@ export function useHousehold() {
 
   const activeMembers = useMemo(() => {
     const activeIds = new Set(household?.memberIds ?? []);
-    return members.filter((member) => activeIds.has(member.uid) && member.status !== "left" && member.status !== "removed");
-  }, [household?.memberIds, members]);
+    const orderedMembers = members.filter((member) => activeIds.has(member.uid) && member.status !== "left" && member.status !== "removed");
+    if (!appUser?.uid) return orderedMembers;
+
+    return [...orderedMembers].sort((a, b) => {
+      if (a.uid === appUser.uid) return -1;
+      if (b.uid === appUser.uid) return 1;
+      return 0;
+    });
+  }, [appUser?.uid, household?.memberIds, members]);
 
   const partner = useMemo(
     () => activeMembers.find((member) => member.uid !== appUser?.uid) ?? null,

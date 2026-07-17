@@ -57,7 +57,7 @@ export default function DashboardPage() {
         </Card>
       </div>
       <div className="grid min-w-0 gap-3 sm:grid-cols-3">
-        <Link href="/app/expenses/new" className="min-w-0">
+        <Link href="/app/expenses/new?returnTo=%2Fapp" className="min-w-0">
           <Button className="w-full whitespace-normal text-center"><Plus className="h-4 w-4 shrink-0" />{t("quick.addExpense")}</Button>
         </Link>
         <Link href="/app/expenses/new?mode=recurring" className="min-w-0">
@@ -76,7 +76,7 @@ export default function DashboardPage() {
             <EmptyState
               title={t("dashboard.noExpensesTitle")}
               message={t("dashboard.noExpensesMessage")}
-              action={<Link href="/app/expenses/new"><Button>{t("quick.addExpense")}</Button></Link>}
+              action={<Link href="/app/expenses/new?returnTo=%2Fapp"><Button>{t("quick.addExpense")}</Button></Link>}
             />
           )}
         </section>
