@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { BalanceCard } from "@/components/dashboard/balance-card";
+import { CurrencySelect } from "@/components/currency-select";
 import { Button } from "@/components/ui/button";
 import { Card, SectionHeader } from "@/components/ui/card";
 import { Field, Input, Select, Textarea } from "@/components/ui/input";
@@ -31,6 +32,7 @@ export default function SettleUpPage() {
   const [submitting, setSubmitting] = useState(false);
   const balances = calculateBalances(activeExpenses, activeSettlements);
   const myBalance = appUser ? balances[appUser.uid] ?? 0 : 0;
+  const householdCurrency = household?.defaultCurrency ?? "ILS";
 
   const defaults = useMemo(() => {
     const currentUid = appUser?.uid ?? "";
@@ -39,10 +41,11 @@ export default function SettleUpPage() {
       fromUid: myBalance < 0 ? currentUid : partnerUid,
       toUid: myBalance < 0 ? partnerUid : currentUid,
       amount: myBalance === 0 ? "" : minorToInput(Math.abs(myBalance)),
+      currency: householdCurrency,
       date: inputDate(new Date()),
       note: ""
     };
-  }, [appUser?.uid, myBalance, partner?.uid]);
+  }, [appUser?.uid, householdCurrency, myBalance, partner?.uid]);
 
   const form = useForm<SettlementFormValues>({
     resolver: zodResolver(settlementSchema),
@@ -66,7 +69,7 @@ export default function SettleUpPage() {
   return (
     <div className="grid gap-5">
       <SectionHeader title={t("settle.title")} subtitle={t("settle.subtitle")} />
-      <BalanceCard balanceMinor={myBalance} />
+      <BalanceCard balanceMinor={myBalance} currency={householdCurrency} />
       <Card>
         <form className="grid gap-4" onSubmit={form.handleSubmit(submit)}>
           <div className="grid gap-4 sm:grid-cols-2">
@@ -81,10 +84,16 @@ export default function SettleUpPage() {
               </Select>
             </Field>
           </div>
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-4 sm:grid-cols-3">
             <Field label={t("common.amount")} error={form.formState.errors.amount?.message}>
               <Input inputMode="decimal" {...form.register("amount")} />
             </Field>
+            <CurrencySelect
+              label={t("common.currency")}
+              value={form.watch("currency") ?? householdCurrency}
+              onChange={(currency) => form.setValue("currency", currency, { shouldValidate: true })}
+              error={form.formState.errors.currency?.message}
+            />
             <Field label={t("common.date")} error={form.formState.errors.date?.message}>
               <Input type="date" {...form.register("date")} />
             </Field>

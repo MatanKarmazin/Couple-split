@@ -1,7 +1,7 @@
 import type { CurrencyCode } from "@/types";
 
 export function parseMoneyToMinor(input: string): number {
-  const normalized = input.trim().replace(/[₪,\s]/g, "");
+  const normalized = input.trim().replace(/[^\d.]/g, "");
   if (!/^\d+(\.\d{0,2})?$/.test(normalized)) {
     throw new Error("Enter a valid amount with up to 2 decimals.");
   }
@@ -21,6 +21,10 @@ export function formatMoney(amountMinor: number, currency: CurrencyCode = "ILS",
 
 export function minorToInput(amountMinor: number) {
   return (amountMinor / 100).toFixed(2);
+}
+
+export function convertMinor(amountMinor: number, rate: number) {
+  return Math.round(amountMinor * rate);
 }
 
 export function calculateEqualShares(amountMinor: number, participants: string[]) {

@@ -60,10 +60,14 @@ export default function ExpenseDetailPage() {
   }
 
   const payer = members.find((member) => member.uid === expense.paidByUid)?.displayName ?? t("common.someone");
+  const currency = expense.currency ?? "ILS";
+  const householdCurrency = expense.householdCurrency ?? currency;
+  const showConverted = currency !== householdCurrency && typeof expense.householdAmountMinor === "number";
   const shareSummary = expense.participants
     .map((uid) => {
       const member = members.find((item) => item.uid === uid);
-      return `${member?.displayName ?? uid}: ${formatMoney(expense.shares[uid] ?? 0, "ILS", locale)}`;
+      const shareMinor = (showConverted ? expense.householdShares?.[uid] : expense.shares[uid]) ?? 0;
+      return `${member?.displayName ?? uid}: ${formatMoney(shareMinor, showConverted ? householdCurrency : currency, locale)}`;
     })
     .join(", ");
 
@@ -87,7 +91,8 @@ export default function ExpenseDetailPage() {
         <Card className="grid gap-4">
           <div>
             <p className="text-sm font-semibold text-text-muted">{t("common.amount")}</p>
-            <p className="mt-1 text-3xl font-bold text-text">{formatMoney(expense.amountMinor, "ILS", locale)}</p>
+            <p className="mt-1 text-3xl font-bold text-text">{formatMoney(expense.amountMinor, currency, locale)}</p>
+            {showConverted ? <p className="mt-1 text-sm font-semibold text-text-muted">{formatMoney(expense.householdAmountMinor ?? 0, householdCurrency, locale)}</p> : null}
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             <Info label={t("expenses.paidBy")} value={payer} />

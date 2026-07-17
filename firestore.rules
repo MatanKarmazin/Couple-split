@@ -107,6 +107,23 @@ service cloud.firestore {
         && householdData(householdId).memberIds.hasAll(request.resource.data.participants);
     }
 
+    function validCurrency(currency) {
+      return currency is string && currency.size() == 3;
+    }
+
+    function validExchangeRate(sourceCurrency, targetCurrency) {
+      return request.resource.data.exchangeRate is map
+        && request.resource.data.exchangeRate.sourceCurrency == sourceCurrency
+        && request.resource.data.exchangeRate.targetCurrency == targetCurrency
+        && (
+          request.resource.data.exchangeRate.rate is int
+          || request.resource.data.exchangeRate.rate is float
+        )
+        && request.resource.data.exchangeRate.rate > 0
+        && request.resource.data.exchangeRate.provider is string
+        && request.resource.data.exchangeRate.rateDate is string;
+    }
+
     function validShareAt(index) {
       return request.resource.data.participants.size() <= index
         || (
@@ -136,6 +153,41 @@ service cloud.firestore {
         && shareAt(0) + shareAt(1) + shareAt(2) + shareAt(3)
           + shareAt(4) + shareAt(5) + shareAt(6) + shareAt(7)
           == request.resource.data.amountMinor;
+    }
+
+    function validHouseholdShareAt(index) {
+      return request.resource.data.participants.size() <= index
+        || (
+          request.resource.data.householdShares[request.resource.data.participants[index]] is int
+          && request.resource.data.householdShares[request.resource.data.participants[index]] >= 0
+        );
+    }
+
+    function householdShareAt(index) {
+      return request.resource.data.participants.size() > index
+        ? request.resource.data.householdShares[request.resource.data.participants[index]]
+        : 0;
+    }
+
+    function validExpenseHouseholdMoney(householdId) {
+      return request.resource.data.householdCurrency == householdData(householdId).defaultCurrency
+        && request.resource.data.householdAmountMinor is int
+        && request.resource.data.householdAmountMinor > 0
+        && request.resource.data.householdShares is map
+        && request.resource.data.householdShares.keys().size() == request.resource.data.participants.size()
+        && request.resource.data.householdShares.keys().hasAll(request.resource.data.participants)
+        && validHouseholdShareAt(0)
+        && validHouseholdShareAt(1)
+        && validHouseholdShareAt(2)
+        && validHouseholdShareAt(3)
+        && validHouseholdShareAt(4)
+        && validHouseholdShareAt(5)
+        && validHouseholdShareAt(6)
+        && validHouseholdShareAt(7)
+        && householdShareAt(0) + householdShareAt(1) + householdShareAt(2) + householdShareAt(3)
+          + householdShareAt(4) + householdShareAt(5) + householdShareAt(6) + householdShareAt(7)
+          == request.resource.data.householdAmountMinor
+        && validExchangeRate(request.resource.data.currency, request.resource.data.householdCurrency);
     }
 
     function validPlanShareAt(index) {
@@ -169,19 +221,48 @@ service cloud.firestore {
           == request.resource.data.totalAmountMinor;
     }
 
+    function validInstallmentPlanHouseholdMoney(householdId) {
+      return request.resource.data.householdCurrency == householdData(householdId).defaultCurrency
+        && request.resource.data.householdTotalAmountMinor is int
+        && request.resource.data.householdTotalAmountMinor > 0
+        && request.resource.data.householdShares is map
+        && request.resource.data.householdShares.keys().size() == request.resource.data.participants.size()
+        && request.resource.data.householdShares.keys().hasAll(request.resource.data.participants)
+        && validHouseholdShareAt(0)
+        && validHouseholdShareAt(1)
+        && validHouseholdShareAt(2)
+        && validHouseholdShareAt(3)
+        && validHouseholdShareAt(4)
+        && validHouseholdShareAt(5)
+        && validHouseholdShareAt(6)
+        && validHouseholdShareAt(7)
+        && householdShareAt(0) + householdShareAt(1) + householdShareAt(2) + householdShareAt(3)
+          + householdShareAt(4) + householdShareAt(5) + householdShareAt(6) + householdShareAt(7)
+          == request.resource.data.householdTotalAmountMinor
+        && validExchangeRate(request.resource.data.currency, request.resource.data.householdCurrency);
+    }
+
+    function validSettlementHouseholdMoney(householdId) {
+      return request.resource.data.householdCurrency == householdData(householdId).defaultCurrency
+        && request.resource.data.householdAmountMinor is int
+        && request.resource.data.householdAmountMinor > 0
+        && validExchangeRate(request.resource.data.currency, request.resource.data.householdCurrency);
+    }
+
     function validExpenseCreate(householdId) {
       return isHouseholdMember(householdId)
         && request.resource.data.householdId == householdId
         && request.resource.data.createdByUid == request.auth.uid
         && request.resource.data.amountMinor is int
         && request.resource.data.amountMinor > 0
-        && request.resource.data.currency == "ILS"
+        && validCurrency(request.resource.data.currency)
         && request.resource.data.description is string
         && request.resource.data.category is string
         && request.resource.data.paidByUid in householdData(householdId).memberIds
         && request.resource.data.splitType in ["equal", "one_person", "amounts", "percentage"]
         && validExpenseParticipants(householdId)
-        && validExpenseShares(householdId);
+        && validExpenseShares(householdId)
+        && validExpenseHouseholdMoney(householdId);
     }
 
     function validExpenseSoftDelete(householdId) {
@@ -197,7 +278,8 @@ service cloud.firestore {
         && request.resource.data.createdByUid == request.auth.uid
         && request.resource.data.amountMinor is int
         && request.resource.data.amountMinor > 0
-        && request.resource.data.currency == "ILS"
+        && validCurrency(request.resource.data.currency)
+        && validSettlementHouseholdMoney(householdId)
         && request.resource.data.fromUid in householdData(householdId).memberIds
         && request.resource.data.toUid in householdData(householdId).memberIds
         && request.resource.data.fromUid != request.resource.data.toUid;
@@ -215,7 +297,7 @@ service cloud.firestore {
         && request.resource.data.householdId == householdId
         && request.resource.data.amountMinor is int
         && request.resource.data.amountMinor > 0
-        && request.resource.data.currency == "ILS"
+        && validCurrency(request.resource.data.currency)
         && request.resource.data.description is string
         && request.resource.data.category is string
         && request.resource.data.paidByUid in householdData(householdId).memberIds
@@ -242,13 +324,14 @@ service cloud.firestore {
         && request.resource.data.householdId == householdId
         && request.resource.data.totalAmountMinor is int
         && request.resource.data.totalAmountMinor > 0
-        && request.resource.data.currency == "ILS"
+        && validCurrency(request.resource.data.currency)
         && request.resource.data.description is string
         && request.resource.data.category is string
         && request.resource.data.paidByUid in householdData(householdId).memberIds
         && request.resource.data.splitType in ["equal", "one_person", "amounts", "percentage"]
         && validExpenseParticipants(householdId)
         && validInstallmentPlanShares()
+        && validInstallmentPlanHouseholdMoney(householdId)
         && request.resource.data.firstPaymentDate is string
         && request.resource.data.installmentCount is int
         && request.resource.data.installmentCount >= 2
@@ -316,9 +399,13 @@ service cloud.firestore {
             isHouseholdMember(householdId)
             && request.resource.data.createdByUid == resource.data.createdByUid
             && request.resource.data.householdId == householdId
+            && request.resource.data.amountMinor is int
+            && request.resource.data.amountMinor > 0
+            && validCurrency(request.resource.data.currency)
             && request.resource.data.splitType in ["equal", "one_person", "amounts", "percentage"]
             && validExpenseParticipants(householdId)
             && validExpenseShares(householdId)
+            && validExpenseHouseholdMoney(householdId)
           );
         allow delete: if validSoloHouseholdDelete(householdId);
       }

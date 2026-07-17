@@ -14,12 +14,16 @@ export function ExpenseCard({ expense, members }: { expense: Expense; members: H
   const { language, locale, t } = useLanguage();
   const returnTo = safeAppReturnTo(pathname, "/app/expenses", `/app/expenses/${expense.id}`);
   const payer = members.find((member) => member.uid === expense.paidByUid)?.displayName ?? t("common.someone");
+  const currency = expense.currency ?? "ILS";
+  const householdCurrency = expense.householdCurrency ?? currency;
+  const showConverted = currency !== householdCurrency && typeof expense.householdAmountMinor === "number";
   const participantCount = expense.participants.length;
   const compactSplitSummary = `${shortSplitTypeLabel(language, expense.splitType)} - ${participantCount} ${participantCount === 1 ? "person" : "people"}`;
   const fullSplitSummary = expense.participants
     .map((uid) => {
       const member = members.find((item) => item.uid === uid);
-      return `${member?.displayName ?? uid}: ${formatMoney(expense.shares[uid] ?? 0, "ILS", locale)}`;
+      const shareMinor = (showConverted ? expense.householdShares?.[uid] : expense.shares[uid]) ?? 0;
+      return `${member?.displayName ?? uid}: ${formatMoney(shareMinor, showConverted ? householdCurrency : currency, locale)}`;
     })
     .join(" / ");
 
@@ -44,7 +48,8 @@ export function ExpenseCard({ expense, members }: { expense: Expense; members: H
           <p className="mt-1 hidden break-words text-xs text-text-muted/80 sm:block">{shortSplitTypeLabel(language, expense.splitType)} - {fullSplitSummary}</p>
         </div>
         <div className="col-start-2 min-w-0 text-left sm:col-start-auto sm:text-right rtl:text-right">
-          <p className="break-words text-sm font-bold text-text">{formatMoney(expense.amountMinor, "ILS", locale)}</p>
+          <p className="break-words text-sm font-bold text-text">{formatMoney(expense.amountMinor, currency, locale)}</p>
+          {showConverted ? <p className="break-words text-xs text-text-muted">{formatMoney(expense.householdAmountMinor ?? 0, householdCurrency, locale)}</p> : null}
           <Badge className="mt-1 max-w-full break-words">{categoryLabel(language, expense.category)}</Badge>
         </div>
       </div>

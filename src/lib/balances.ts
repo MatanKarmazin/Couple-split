@@ -8,15 +8,16 @@ export function calculateBalances(expenses: Expense[], settlements: Settlement[]
   };
 
   for (const expense of expenses.filter((item) => !item.deletedAt)) {
-    add(expense.paidByUid, expense.amountMinor);
-    for (const [uid, shareMinor] of Object.entries(expense.shares)) {
+    add(expense.paidByUid, expense.householdAmountMinor ?? expense.amountMinor);
+    for (const [uid, shareMinor] of Object.entries(expense.householdShares ?? expense.shares)) {
       add(uid, -shareMinor);
     }
   }
 
   for (const settlement of settlements.filter((item) => !item.deletedAt)) {
-    add(settlement.fromUid, settlement.amountMinor);
-    add(settlement.toUid, -settlement.amountMinor);
+    const amountMinor = settlement.householdAmountMinor ?? settlement.amountMinor;
+    add(settlement.fromUid, amountMinor);
+    add(settlement.toUid, -amountMinor);
   }
 
   return balances;
@@ -35,7 +36,7 @@ export function totalSpendingForMonth(expenses: Expense[], month: Date) {
       const date = toDate(expense.date);
       return date.getFullYear() === month.getFullYear() && date.getMonth() === month.getMonth();
     })
-    .reduce((sum, expense) => sum + expense.amountMinor, 0);
+    .reduce((sum, expense) => sum + (expense.householdAmountMinor ?? expense.amountMinor), 0);
 }
 
 function toDate(value: Expense["date"]) {

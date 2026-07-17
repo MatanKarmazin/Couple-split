@@ -4,6 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { CalendarClock, Pencil, Plus, Power, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
+import { CurrencySelect } from "@/components/currency-select";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, SectionHeader } from "@/components/ui/card";
@@ -34,6 +35,7 @@ export function RecurringBillsPanel({ showHeader = true }: { showHeader?: boolea
   const defaultValues = useMemo<RecurringBillFormValues>(() => ({
     description: editingBill?.description ?? "",
     amount: editingBill ? minorToInput(editingBill.amountMinor) : "",
+    currency: editingBill?.currency ?? "ILS",
     category: editingBill?.category ?? "Rent",
     paidByUid: editingBill?.paidByUid ?? activeMembers[0]?.uid ?? "",
     dayOfMonth: editingBill?.dayOfMonth ?? new Date().getDate(),
@@ -98,10 +100,16 @@ export function RecurringBillsPanel({ showHeader = true }: { showHeader?: boolea
             <Field label={t("expenses.description")} error={form.formState.errors.description?.message}>
               <Input placeholder={t("recurring.descriptionPlaceholder")} {...form.register("description")} />
             </Field>
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-4 sm:grid-cols-3">
               <Field label={t("common.amount")} error={form.formState.errors.amount?.message}>
                 <Input inputMode="decimal" placeholder="4500.00" {...form.register("amount")} />
               </Field>
+              <CurrencySelect
+                label={t("common.currency")}
+                value={form.watch("currency") ?? "ILS"}
+                onChange={(currency) => form.setValue("currency", currency, { shouldValidate: true })}
+                error={form.formState.errors.currency?.message}
+              />
               <Field label={t("common.category")} error={form.formState.errors.category?.message}>
                 <Select {...form.register("category")}>
                   {categories.map((category) => <option key={category} value={category}>{categoryLabel(language, category)}</option>)}
@@ -200,7 +208,7 @@ export function RecurringBillsSummary() {
                   {t("recurring.nextLine", { payer, frequency: frequencyLabel(bill, t), date: formatDateLocale(nextDueDate(bill), locale) })}
                 </p>
               </div>
-              <p className="break-words text-sm font-bold text-text sm:text-right">{formatMoney(bill.amountMinor, "ILS", locale)}</p>
+              <p className="break-words text-sm font-bold text-text sm:text-right">{formatMoney(bill.amountMinor, bill.currency ?? "ILS", locale)}</p>
             </div>
           </Card>
         );
@@ -244,7 +252,7 @@ function RecurringBillCard({
           </p>
         </div>
         <div className="min-w-0 sm:text-right">
-          <p className="break-words text-sm font-bold text-text">{formatMoney(bill.amountMinor, "ILS", locale)}</p>
+          <p className="break-words text-sm font-bold text-text">{formatMoney(bill.amountMinor, bill.currency ?? "ILS", locale)}</p>
           <p className="mt-1 break-words text-xs text-text-muted">{categoryLabel(language, bill.category)}</p>
         </div>
       </div>
@@ -262,6 +270,7 @@ function emptyValues(paidByUid = ""): RecurringBillFormValues {
   return {
     description: "",
     amount: "",
+    currency: "ILS",
     category: "Rent",
     paidByUid,
     dayOfMonth: new Date().getDate(),

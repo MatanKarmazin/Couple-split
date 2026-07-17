@@ -16,6 +16,7 @@ export const categories = [
 ] as const satisfies readonly Category[];
 
 export const splitTypes = ["equal", "one_person", "amounts", "percentage"] as const satisfies readonly SplitType[];
+const currencySchema = z.string().trim().regex(/^[A-Za-z]{3}$/, "Choose a valid currency.").transform((value) => value.toUpperCase());
 
 export const householdSchema = z.object({
   name: z.string().trim().min(2, "Name should be at least 2 characters.").max(48)
@@ -34,6 +35,7 @@ export const expenseSchema = z.object({
       return false;
     }
   }, "Enter a valid positive amount."),
+  currency: currencySchema.default("ILS"),
   date: z.string().min(1, "Choose a date."),
   category: z.enum(categories),
   paidByUid: z.string().min(1, "Choose who paid."),
@@ -57,6 +59,7 @@ export const settlementSchema = z.object({
       return false;
     }
   }, "Enter a valid positive amount."),
+  currency: currencySchema.default("ILS"),
   date: z.string().min(1, "Choose a date."),
   note: z.string().max(180).optional()
 }).refine((data) => data.fromUid !== data.toUid, {
@@ -73,6 +76,7 @@ export const recurringBillSchema = z.object({
       return false;
     }
   }, "Enter a valid positive amount."),
+  currency: currencySchema.default("ILS"),
   category: z.enum(categories),
   paidByUid: z.string().min(1, "Choose who pays."),
   dayOfMonth: z.coerce.number().int().min(1, "Use a day from 1 to 31.").max(31, "Use a day from 1 to 31."),

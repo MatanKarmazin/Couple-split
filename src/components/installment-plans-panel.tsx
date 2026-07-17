@@ -40,6 +40,13 @@ export function InstallmentPlansPanel() {
         <div className="grid gap-2">
           {activeInstallmentPlans.map((plan) => {
             const payer = members.find((member) => member.uid === plan.paidByUid)?.displayName ?? t("common.someone");
+            const currency = plan.currency ?? "ILS";
+            const householdCurrency = plan.householdCurrency ?? currency;
+            const amount = formatMoney(plan.totalAmountMinor, currency, locale);
+            const convertedAmount =
+              currency !== householdCurrency && typeof plan.householdTotalAmountMinor === "number"
+                ? ` / ${formatMoney(plan.householdTotalAmountMinor, householdCurrency, locale)}`
+                : "";
             return (
               <div key={plan.id} className="grid min-w-0 gap-3 rounded-lg border border-border bg-surface-muted p-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
                 <div className="min-w-0">
@@ -49,7 +56,7 @@ export function InstallmentPlansPanel() {
                   </div>
                   <p className="mt-1 break-words text-xs text-text-muted">
                     {t("installments.planLine", {
-                      amount: formatMoney(plan.totalAmountMinor, "ILS", locale),
+                      amount: `${amount}${convertedAmount}`,
                       count: plan.installmentCount,
                       payer,
                       date: formatDateLocale(plan.firstPaymentDate, locale)

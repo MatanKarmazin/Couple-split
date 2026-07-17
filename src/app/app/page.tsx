@@ -33,6 +33,7 @@ export default function DashboardPage() {
   const balances = calculateBalances(activeExpenses, activeSettlements);
   const myBalance = appUser ? balances[appUser.uid] ?? 0 : 0;
   const monthTotal = totalSpendingForMonth(activeExpenses, new Date());
+  const householdCurrency = household?.defaultCurrency ?? "ILS";
 
   async function removeSettlement() {
     if (!household || !settlementToDelete) return;
@@ -49,10 +50,10 @@ export default function DashboardPage() {
         action={<Link href="/app/invite"><Button variant="secondary">{t("dashboard.invite")}</Button></Link>}
       />
       <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
-        <BalanceCard balanceMinor={myBalance} />
+        <BalanceCard balanceMinor={myBalance} currency={householdCurrency} />
         <Card className="min-w-0 overflow-hidden">
           <p className="break-words text-sm font-semibold text-text-muted">{t("dashboard.monthIn", { name: household?.name ?? t("common.household") })}</p>
-          <p className="mt-2 break-words text-2xl font-bold text-text sm:text-3xl">{formatMoney(monthTotal, "ILS", locale)}</p>
+          <p className="mt-2 break-words text-2xl font-bold text-text sm:text-3xl">{formatMoney(monthTotal, householdCurrency, locale)}</p>
           <p className="mt-2 break-words text-sm text-text-muted">{t("dashboard.activeExpenses", { count: activeExpenses.length })}</p>
         </Card>
       </div>
@@ -88,12 +89,19 @@ export default function DashboardPage() {
               activeSettlements.slice(0, 5).map((settlement) => {
                 const from = members.find((member) => member.uid === settlement.fromUid)?.displayName ?? t("common.someone");
                 const to = members.find((member) => member.uid === settlement.toUid)?.displayName ?? t("common.someoneLower");
+                const settlementCurrency = settlement.currency ?? householdCurrency;
+                const settlementHouseholdCurrency = settlement.householdCurrency ?? settlementCurrency;
+                const showSettlementConverted = settlementCurrency !== settlementHouseholdCurrency && typeof settlement.householdAmountMinor === "number";
                 return (
                   <Card key={settlement.id} className="min-w-0 overflow-hidden p-3">
                     <div className="flex min-w-0 items-start justify-between gap-3">
                       <div className="min-w-0">
                         <p className="break-words text-sm font-bold text-text">{t("dashboard.settlementPaid", { from, to })}</p>
-                        <p className="mt-1 break-words text-sm text-text-muted">{formatMoney(settlement.amountMinor, "ILS", locale)} - {formatDateLocale(settlement.date, locale)}</p>
+                        <p className="mt-1 break-words text-sm text-text-muted">
+                          {formatMoney(settlement.amountMinor, settlementCurrency, locale)}
+                          {showSettlementConverted ? ` / ${formatMoney(settlement.householdAmountMinor ?? 0, settlementHouseholdCurrency, locale)}` : ""}
+                          {" - "}{formatDateLocale(settlement.date, locale)}
+                        </p>
                         {settlement.note ? <p className="mt-1 break-words text-xs text-text-muted/80">{settlement.note}</p> : null}
                       </div>
                       <Button variant="ghost" className="h-9 shrink-0 px-2" onClick={() => setSettlementToDelete(settlement)} aria-label={t("dashboard.deleteSettlementTitle")}>

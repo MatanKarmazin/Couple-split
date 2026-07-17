@@ -18,6 +18,10 @@ import {
 } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
 import {
+  buildConvertedMoneyPayload,
+  normalizeCurrency
+} from "@/lib/exchange-rates";
+import {
   calculateAmountShares,
   calculateEqualShares,
   calculateOnePersonShares,
@@ -30,6 +34,12 @@ import type { ExpenseFormValues, RecurringBillFormValues, SettlementFormValues }
 
 function withId<T>(id: string, data: Record<string, unknown>) {
   return { id, ...data } as T;
+}
+
+async function loadHousehold(householdId: string) {
+  const snapshot = await getDoc(doc(db, "households", householdId));
+  if (!snapshot.exists()) throw new Error("Household not found.");
+  return withId<Household>(snapshot.id, snapshot.data());
 }
 
 export function listenToUser(uid: string, callback: (user: AppUser | null) => void): Unsubscribe {
@@ -344,18 +354,32 @@ export async function saveExpense(
 ) {
   const amountMinor = parseMoneyToMinor(values.amount);
   const shares = calculateExpenseShares(amountMinor, values);
+  const household = await loadHousehold(householdId);
+  const currency = normalizeCurrency(values.currency);
+  const householdCurrency = household.defaultCurrency ?? "ILS";
+  const converted = await buildConvertedMoneyPayload({
+    amountMinor,
+    shares,
+    sourceCurrency: currency,
+    targetCurrency: householdCurrency,
+    date: values.date
+  });
 
   if (!expenseId && values.paymentSchedule === "installments" && values.installmentCount > 1) {
     const planRef = await addDoc(collection(db, "households", householdId, "installmentPlans"), {
       householdId,
       description: values.description,
       totalAmountMinor: amountMinor,
-      currency: "ILS",
+      currency,
+      householdCurrency,
+      householdTotalAmountMinor: converted.householdAmountMinor,
       category: values.category,
       paidByUid: values.paidByUid,
       splitType: values.splitType,
       participants: values.participants,
       shares,
+      householdShares: converted.householdShares,
+      exchangeRate: converted.exchangeRate,
       firstPaymentDate: values.date,
       installmentCount: values.installmentCount,
       active: true,
@@ -371,12 +395,16 @@ export async function saveExpense(
     householdId,
     description: values.description,
     amountMinor,
-    currency: "ILS",
+    currency,
+    householdCurrency,
+    householdAmountMinor: converted.householdAmountMinor,
     category: values.category,
     paidByUid: values.paidByUid,
     splitType: values.splitType,
     participants: values.participants,
     shares,
+    householdShares: converted.householdShares,
+    exchangeRate: converted.exchangeRate,
     date: values.date,
     notes: values.notes ?? "",
     updatedAt: serverTimestamp()
@@ -443,7 +471,7 @@ export async function saveRecurringBill(
     householdId,
     description: values.description,
     amountMinor: parseMoneyToMinor(values.amount),
-    currency: "ILS",
+    currency: normalizeCurrency(values.currency),
     category: values.category,
     paidByUid: values.paidByUid,
     dayOfMonth: values.dayOfMonth,
@@ -512,16 +540,28 @@ export async function materializeDueRecurringExpenses(
       if (existingExpense.exists()) continue;
 
       const shares = calculateEqualShares(bill.amountMinor, memberUids);
+      const householdCurrency = (await loadHousehold(householdId)).defaultCurrency ?? "ILS";
+      const converted = await buildConvertedMoneyPayload({
+        amountMinor: bill.amountMinor,
+        shares,
+        sourceCurrency: bill.currency ?? householdCurrency,
+        targetCurrency: householdCurrency,
+        date: formatInputDate(date)
+      });
       await setDoc(expenseRef, {
         householdId,
         description: bill.description,
         amountMinor: bill.amountMinor,
-        currency: "ILS",
+        currency: bill.currency ?? householdCurrency,
+        householdCurrency,
+        householdAmountMinor: converted.householdAmountMinor,
         category: bill.category,
         paidByUid: bill.paidByUid,
         splitType: "equal",
         participants: memberUids,
         shares,
+        householdShares: converted.householdShares,
+        exchangeRate: converted.exchangeRate,
         date: formatInputDate(date),
         notes: bill.notes ?? "",
         recurringBillId: bill.id,
@@ -566,16 +606,29 @@ export async function materializeDueInstallmentExpenses(
       if (existingExpense.exists()) continue;
 
       const amountMinor = installmentAmountAt(plan.totalAmountMinor, count, index);
+      const shares = installmentSharesAt(plan.shares, plan.totalAmountMinor, count, index);
+      const householdCurrency = (await loadHousehold(householdId)).defaultCurrency ?? "ILS";
+      const converted = await buildConvertedMoneyPayload({
+        amountMinor,
+        shares,
+        sourceCurrency: plan.currency ?? householdCurrency,
+        targetCurrency: householdCurrency,
+        date: formatInputDate(date)
+      });
       await setDoc(expenseRef, {
         householdId,
         description: plan.description,
         amountMinor,
-        currency: "ILS",
+        currency: plan.currency ?? householdCurrency,
+        householdCurrency,
+        householdAmountMinor: converted.householdAmountMinor,
         category: plan.category,
         paidByUid: plan.paidByUid,
         splitType: plan.splitType,
         participants: plan.participants,
-        shares: installmentSharesAt(plan.shares, plan.totalAmountMinor, count, index),
+        shares,
+        householdShares: converted.householdShares,
+        exchangeRate: converted.exchangeRate,
         date: formatInputDate(date),
         notes: plan.notes ?? "",
         installmentPlanId: plan.id,
@@ -590,12 +643,25 @@ export async function materializeDueInstallmentExpenses(
 }
 
 export async function createSettlement(householdId: string, userUid: string, values: SettlementFormValues) {
+  const household = await loadHousehold(householdId);
+  const amountMinor = parseMoneyToMinor(values.amount);
+  const currency = normalizeCurrency(values.currency);
+  const householdCurrency = household.defaultCurrency ?? "ILS";
+  const converted = await buildConvertedMoneyPayload({
+    amountMinor,
+    sourceCurrency: currency,
+    targetCurrency: householdCurrency,
+    date: values.date
+  });
   const settlementRef = await addDoc(collection(db, "households", householdId, "settlements"), {
     householdId,
     fromUid: values.fromUid,
     toUid: values.toUid,
-    amountMinor: parseMoneyToMinor(values.amount),
-    currency: "ILS",
+    amountMinor,
+    currency,
+    householdCurrency,
+    householdAmountMinor: converted.householdAmountMinor,
+    exchangeRate: converted.exchangeRate,
     date: values.date,
     note: values.note ?? "",
     createdByUid: userUid,

@@ -3,6 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
+import { CurrencySelect } from "@/components/currency-select";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select, Textarea } from "@/components/ui/input";
 import { useLanguage } from "@/hooks/useLanguage";
@@ -44,6 +45,7 @@ export function ExpenseForm({
     defaultValues: {
       description: initialExpense?.description ?? "",
       amount: initialExpense ? minorToInput(initialExpense.amountMinor) : "",
+      currency: initialExpense?.currency ?? "ILS",
       date: inputDate(initialExpense?.date),
       category: initialExpense?.category ?? "Food",
       paidByUid: initialExpense?.paidByUid ?? members[0]?.uid ?? "",
@@ -61,6 +63,7 @@ export function ExpenseForm({
   const splitType = watch("splitType");
   const paymentSchedule = watch("paymentSchedule");
   const installmentCount = watch("installmentCount");
+  const currency = watch("currency") ?? "ILS";
   const participants = watch("participants");
   const amount = watch("amount");
   const paidByUid = watch("paidByUid");
@@ -76,19 +79,20 @@ export function ExpenseForm({
         owedByUid,
         shareAmounts,
         sharePercentages,
+        currency,
         members,
         participants,
         fallbackName: t("common.someone")
       }),
-    [amount, members, owedByUid, paidByUid, participants, shareAmounts, sharePercentages, splitType, t]
+    [amount, currency, members, owedByUid, paidByUid, participants, shareAmounts, sharePercentages, splitType, t]
   );
   const selectedMembers = useMemo(
     () => members.filter((member) => participants?.includes(member.uid)),
     [members, participants]
   );
   const installmentPreview = useMemo(
-    () => buildInstallmentPreview(amount, installmentCount, locale),
-    [amount, installmentCount, locale]
+    () => buildInstallmentPreview(amount, installmentCount, currency, locale),
+    [amount, currency, installmentCount, locale]
   );
 
   useEffect(() => {
@@ -114,10 +118,16 @@ export function ExpenseForm({
       <Field label={t("expenses.description")} error={errors.description?.message}>
         <Input placeholder={t("expenses.descriptionPlaceholder")} {...register("description")} />
       </Field>
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-4 sm:grid-cols-3">
         <Field label={t("common.amount")} error={errors.amount?.message}>
           <Input inputMode="decimal" placeholder="123.45" {...register("amount")} />
         </Field>
+        <CurrencySelect
+          label={t("common.currency")}
+          value={currency}
+          onChange={(nextCurrency) => setValue("currency", nextCurrency, { shouldValidate: true })}
+          error={errors.currency?.message}
+        />
         <Field label={t("common.date")} error={errors.date?.message}>
           <Input type="date" {...register("date")} />
         </Field>
@@ -229,12 +239,12 @@ export function ExpenseForm({
         <p className="break-words text-sm font-bold text-text">{t("expenses.splitPreview")}</p>
         {splitPreview ? (
           <div className="mt-2 grid min-w-0 gap-2 text-sm text-text-muted">
-            <p className="break-words">{t("expenses.previewPays", { name: splitPreview.payerName, amount: formatMoney(splitPreview.amountMinor, "ILS", locale) })}</p>
+            <p className="break-words">{t("expenses.previewPays", { name: splitPreview.payerName, amount: formatMoney(splitPreview.amountMinor, splitPreview.currency, locale) })}</p>
             <div className="grid gap-1">
               {splitPreview.shares.map((share) => (
                 <div key={share.uid} className="grid min-w-0 gap-1 rounded-md bg-surface/70 px-3 py-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
                   <span className="break-words font-semibold text-text">{share.name}</span>
-                  <span className="break-words sm:text-right">{formatMoney(share.amountMinor, "ILS", locale)}</span>
+                  <span className="break-words sm:text-right">{formatMoney(share.amountMinor, splitPreview.currency, locale)}</span>
                 </div>
               ))}
             </div>
@@ -255,6 +265,7 @@ function buildSplitPreview({
   owedByUid,
   shareAmounts,
   sharePercentages,
+  currency,
   members,
   participants,
   fallbackName
@@ -265,6 +276,7 @@ function buildSplitPreview({
   owedByUid?: string;
   shareAmounts?: Record<string, string>;
   sharePercentages?: Record<string, string>;
+  currency: ExpenseFormValues["currency"];
   members: HouseholdMember[];
   participants: string[];
   fallbackName: string;
@@ -286,6 +298,7 @@ function buildSplitPreview({
 
     return {
       amountMinor,
+      currency,
       payerName,
       shares: selectedMembers.map((member) => ({
         uid: member.uid,
@@ -298,13 +311,13 @@ function buildSplitPreview({
   }
 }
 
-function buildInstallmentPreview(amount: string, count: number, locale: string) {
+function buildInstallmentPreview(amount: string, count: number, currency: string, locale: string) {
   const safeCount = Number(count);
   if (!Number.isFinite(safeCount) || safeCount < 2) return null;
 
   try {
     const amountMinor = parseMoneyToMinor(amount);
-    return formatMoney(Math.floor(amountMinor / safeCount), "ILS", locale);
+    return formatMoney(Math.floor(amountMinor / safeCount), currency, locale);
   } catch {
     return null;
   }

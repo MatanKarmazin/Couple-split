@@ -1,4 +1,4 @@
-export type CurrencyCode = "ILS";
+export type CurrencyCode = string;
 
 export type Category =
   | "Food"
@@ -66,11 +66,15 @@ export type Expense = {
   description: string;
   amountMinor: number;
   currency: CurrencyCode;
+  householdCurrency?: CurrencyCode;
+  householdAmountMinor?: number;
   category: Category;
   paidByUid: string;
   splitType: SplitType;
   participants: string[];
   shares: Record<string, number>;
+  householdShares?: Record<string, number>;
+  exchangeRate?: ExchangeRateInfo;
   date: FirestoreDate;
   notes?: string;
   recurringBillId?: string;
@@ -91,6 +95,9 @@ export type Settlement = {
   toUid: string;
   amountMinor: number;
   currency: CurrencyCode;
+  householdCurrency?: CurrencyCode;
+  householdAmountMinor?: number;
+  exchangeRate?: ExchangeRateInfo;
   date: FirestoreDate;
   note?: string;
   createdByUid: string;
@@ -124,11 +131,15 @@ export type InstallmentPlan = {
   description: string;
   totalAmountMinor: number;
   currency: CurrencyCode;
+  householdCurrency?: CurrencyCode;
+  householdTotalAmountMinor?: number;
   category: Category;
   paidByUid: string;
   splitType: SplitType;
   participants: string[];
   shares: Record<string, number>;
+  householdShares?: Record<string, number>;
+  exchangeRate?: ExchangeRateInfo;
   firstPaymentDate: FirestoreDate;
   installmentCount: number;
   active: boolean;
@@ -137,6 +148,14 @@ export type InstallmentPlan = {
   createdAt?: FirestoreDate;
   updatedAt?: FirestoreDate;
   deletedAt?: FirestoreDate;
+};
+
+export type ExchangeRateInfo = {
+  sourceCurrency: CurrencyCode;
+  targetCurrency: CurrencyCode;
+  rate: number;
+  provider: string;
+  rateDate: string;
 };
 
 export type BalanceMap = Record<string, number>;
