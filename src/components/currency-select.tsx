@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Field, Select } from "@/components/ui/input";
+import { useLanguage } from "@/hooks/useLanguage";
 import { fetchCurrencies, quickCurrencies } from "@/lib/exchange-rates";
 import type { CurrencyCode } from "@/types";
 
@@ -16,6 +17,7 @@ export function CurrencySelect({
   label: string;
   error?: string;
 }) {
+  const { t } = useLanguage();
   const normalizedValue = value || "ILS";
   const [mode, setMode] = useState<"quick" | "other">(isQuickCurrency(normalizedValue) ? "quick" : "other");
   const [currencies, setCurrencies] = useState<Array<{ code: CurrencyCode; name: string }>>([]);
@@ -59,11 +61,11 @@ export function CurrencySelect({
           }}
         >
           {quickCurrencies.map((currency) => <option key={currency} value={currency}>{currency}</option>)}
-          <option value="OTHER">Other</option>
+          <option value="OTHER">{t("common.other")}</option>
         </Select>
         {mode === "other" ? (
           <Select value={isQuickCurrency(normalizedValue) ? "" : normalizedValue} onChange={(event) => onChange(event.target.value)}>
-            <option value="">Choose currency</option>
+            <option value="">{t("common.chooseCurrency")}</option>
             {otherCurrencies.map((currency) => (
               <option key={currency.code} value={currency.code}>{currency.code} - {currency.name}</option>
             ))}

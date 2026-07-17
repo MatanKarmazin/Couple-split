@@ -8,7 +8,7 @@ import { ToastProvider } from "@/components/ui/toast";
 export const metadata: Metadata = {
   applicationName: "SplitNest",
   title: "SplitNest",
-  description: "A private expense-splitting app for couples.",
+  description: "A private expense-splitting app for households, trips, and shared groups.",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,

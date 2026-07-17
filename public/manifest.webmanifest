@@ -1,7 +1,7 @@
 {
   "name": "SplitNest",
   "short_name": "SplitNest",
-  "description": "A private expense-splitting app for couples.",
+  "description": "A private expense-splitting app for households, trips, and shared groups.",
   "start_url": "/app",
   "scope": "/",
   "display": "standalone",
