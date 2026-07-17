@@ -11,6 +11,7 @@ import { switchHousehold } from "@/lib/firebase/firestore";
 import { useRequireAuth } from "@/hooks/useAuth";
 import { useHousehold } from "@/hooks/useHousehold";
 import { useLanguage } from "@/hooks/useLanguage";
+import { useInstallmentPlans } from "@/hooks/useInstallmentPlans";
 import { useRecurringBills } from "@/hooks/useRecurringBills";
 import { cn } from "@/lib/utils";
 
@@ -39,6 +40,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     households.length === 0 &&
     pathname !== "/app/onboarding";
   useRecurringBills(household?.id, activeMembers);
+  useInstallmentPlans(household?.id, activeMembers);
 
   useEffect(() => {
     if (needsOnboarding) {
@@ -58,7 +60,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <CircleDollarSign className="h-5 w-5" />
           </div>
           <div>
-            <p className="text-base font-bold text-text">CoupleSplit</p>
+            <p className="text-base font-bold text-text">SplitNest</p>
             <p className="text-xs text-text-muted">{household?.name ?? t("common.household")}</p>
           </div>
         </Link>

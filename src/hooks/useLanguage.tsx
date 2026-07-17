@@ -23,7 +23,7 @@ type LanguageContextValue = {
 };
 
 const LanguageContext = createContext<LanguageContextValue | null>(null);
-const storageKey = "couplesplit-language";
+const storageKey = "splitnest-language";
 
 function applyDocumentLanguage(language: Language) {
   document.documentElement.lang = language;

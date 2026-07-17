@@ -29,6 +29,11 @@ export function ExpenseCard({ expense, members }: { expense: Expense; members: H
           <div className="flex min-w-0 flex-wrap items-center gap-2">
             <p className="min-w-0 break-words text-sm font-bold text-text">{expense.description}</p>
             {expense.recurringBillId ? <Badge className="shrink-0">{t("expenses.recurringBadge")}</Badge> : null}
+            {expense.installmentPlanId ? (
+              <Badge className="shrink-0">
+                {t("installments.badge", { index: expense.installmentIndex ?? 1, count: expense.installmentCount ?? 1 })}
+              </Badge>
+            ) : null}
           </div>
           <p className="mt-1 break-words text-xs text-text-muted">{t("expenses.paidByLine", { name: payer, date: formatDateLocale(expense.date, locale) })}</p>
           <p className="mt-1 break-words text-xs text-text-muted/80 sm:hidden">{compactSplitSummary}</p>

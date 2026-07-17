@@ -75,6 +75,9 @@ export type Expense = {
   notes?: string;
   recurringBillId?: string;
   recurringOccurrenceKey?: string;
+  installmentPlanId?: string;
+  installmentIndex?: number;
+  installmentCount?: number;
   createdByUid: string;
   createdAt?: FirestoreDate;
   updatedAt?: FirestoreDate;
@@ -107,6 +110,27 @@ export type RecurringBill = {
   dayOfMonth: number;
   startMonth: string;
   frequencyMonths?: 1 | 2;
+  active: boolean;
+  notes?: string;
+  createdByUid: string;
+  createdAt?: FirestoreDate;
+  updatedAt?: FirestoreDate;
+  deletedAt?: FirestoreDate;
+};
+
+export type InstallmentPlan = {
+  id: string;
+  householdId: string;
+  description: string;
+  totalAmountMinor: number;
+  currency: CurrencyCode;
+  category: Category;
+  paidByUid: string;
+  splitType: SplitType;
+  participants: string[];
+  shares: Record<string, number>;
+  firstPaymentDate: FirestoreDate;
+  installmentCount: number;
   active: boolean;
   notes?: string;
   createdByUid: string;

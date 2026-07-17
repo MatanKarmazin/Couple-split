@@ -4,6 +4,7 @@ import { CalendarClock, ReceiptText } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import { ExpenseForm } from "@/components/expenses/expense-form";
+import { InstallmentPlansPanel } from "@/components/installment-plans-panel";
 import { RecurringBillsPanel } from "@/components/recurring-bills-panel";
 import { Button } from "@/components/ui/button";
 import { Card, SectionHeader } from "@/components/ui/card";
@@ -73,9 +74,12 @@ function NewExpenseContent() {
       {mode === "recurring" ? (
         <RecurringBillsPanel showHeader={false} />
       ) : (
-        <Card>
-          <ExpenseForm members={activeMembers} onSubmit={submit} submitting={submitting} />
-        </Card>
+        <>
+          <Card>
+            <ExpenseForm members={activeMembers} onSubmit={submit} submitting={submitting} />
+          </Card>
+          <InstallmentPlansPanel />
+        </>
       )}
     </div>
   );

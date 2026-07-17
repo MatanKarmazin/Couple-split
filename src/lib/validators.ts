@@ -42,6 +42,8 @@ export const expenseSchema = z.object({
   owedByUid: z.string().optional(),
   shareAmounts: z.record(z.string()).optional(),
   sharePercentages: z.record(z.string()).optional(),
+  paymentSchedule: z.enum(["single", "installments"]).default("single"),
+  installmentCount: z.coerce.number().int().min(1).max(12).default(1),
   notes: z.string().max(240).optional()
 });
 

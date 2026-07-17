@@ -52,11 +52,15 @@ export function ExpenseForm({
       owedByUid: owedByDefault(initialExpense, members),
       shareAmounts: amountDefaults(initialExpense, members),
       sharePercentages: percentageDefaults(initialExpense, members),
+      paymentSchedule: "single",
+      installmentCount: 1,
       notes: initialExpense?.notes ?? ""
     }
   });
 
   const splitType = watch("splitType");
+  const paymentSchedule = watch("paymentSchedule");
+  const installmentCount = watch("installmentCount");
   const participants = watch("participants");
   const amount = watch("amount");
   const paidByUid = watch("paidByUid");
@@ -81,6 +85,10 @@ export function ExpenseForm({
   const selectedMembers = useMemo(
     () => members.filter((member) => participants?.includes(member.uid)),
     [members, participants]
+  );
+  const installmentPreview = useMemo(
+    () => buildInstallmentPreview(amount, installmentCount, locale),
+    [amount, installmentCount, locale]
   );
 
   useEffect(() => {
@@ -130,6 +138,30 @@ export function ExpenseForm({
           </Select>
         </Field>
       </div>
+      {!initialExpense ? (
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label={t("installments.schedule")} error={errors.paymentSchedule?.message}>
+            <Select {...register("paymentSchedule")}>
+              <option value="single">{t("installments.single")}</option>
+              <option value="installments">{t("installments.monthly")}</option>
+            </Select>
+          </Field>
+          {paymentSchedule === "installments" ? (
+            <Field label={t("installments.count")} error={errors.installmentCount?.message}>
+              <Select {...register("installmentCount")}>
+                {Array.from({ length: 12 }, (_, index) => index + 1).map((count) => (
+                  <option key={count} value={count}>{count}</option>
+                ))}
+              </Select>
+            </Field>
+          ) : null}
+        </div>
+      ) : null}
+      {!initialExpense && paymentSchedule === "installments" && installmentPreview ? (
+        <div className="rounded-lg bg-accent/20 px-3 py-2 text-sm font-semibold text-text">
+          {t("installments.preview", { amount: installmentPreview, count: installmentCount })}
+        </div>
+      ) : null}
       <Field label={t("expenses.split")} error={errors.splitType?.message}>
         <Select {...register("splitType")}>
           <option value="equal">{splitTypeLabel(language, "equal")}</option>
@@ -261,6 +293,18 @@ function buildSplitPreview({
         amountMinor: shares[member.uid] ?? 0
       }))
     };
+  } catch {
+    return null;
+  }
+}
+
+function buildInstallmentPreview(amount: string, count: number, locale: string) {
+  const safeCount = Number(count);
+  if (!Number.isFinite(safeCount) || safeCount < 2) return null;
+
+  try {
+    const amountMinor = parseMoneyToMinor(amount);
+    return formatMoney(Math.floor(amountMinor / safeCount), "ILS", locale);
   } catch {
     return null;
   }

@@ -23,7 +23,7 @@ import {
   parseMoneyToMinor
 } from "@/lib/money";
 import { generateInviteCode } from "@/lib/utils";
-import type { AppUser, Expense, Household, HouseholdMember, RecurringBill, Settlement } from "@/types";
+import type { AppUser, Expense, Household, HouseholdMember, InstallmentPlan, RecurringBill, Settlement } from "@/types";
 import type { ExpenseFormValues, RecurringBillFormValues, SettlementFormValues } from "@/lib/validators";
 
 function withId<T>(id: string, data: Record<string, unknown>) {
@@ -92,6 +92,13 @@ export function listenToRecurringBills(householdId: string, callback: (bills: Re
   return onSnapshot(
     query(collection(db, "households", householdId, "recurringBills"), orderBy("description", "asc")),
     (snapshot) => callback(snapshot.docs.map((item) => withId<RecurringBill>(item.id, item.data())))
+  );
+}
+
+export function listenToInstallmentPlans(householdId: string, callback: (plans: InstallmentPlan[]) => void): Unsubscribe {
+  return onSnapshot(
+    query(collection(db, "households", householdId, "installmentPlans"), orderBy("firstPaymentDate", "desc")),
+    (snapshot) => callback(snapshot.docs.map((item) => withId<InstallmentPlan>(item.id, item.data())))
   );
 }
 
@@ -293,6 +300,29 @@ export async function saveExpense(
 ) {
   const amountMinor = parseMoneyToMinor(values.amount);
   const shares = calculateExpenseShares(amountMinor, values);
+
+  if (!expenseId && values.paymentSchedule === "installments" && values.installmentCount > 1) {
+    const planRef = await addDoc(collection(db, "households", householdId, "installmentPlans"), {
+      householdId,
+      description: values.description,
+      totalAmountMinor: amountMinor,
+      currency: "ILS",
+      category: values.category,
+      paidByUid: values.paidByUid,
+      splitType: values.splitType,
+      participants: values.participants,
+      shares,
+      firstPaymentDate: values.date,
+      installmentCount: values.installmentCount,
+      active: true,
+      notes: values.notes ?? "",
+      createdByUid: userUid,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    });
+    return planRef.id;
+  }
+
   const payload = {
     householdId,
     description: values.description,
@@ -340,6 +370,21 @@ function calculateExpenseShares(amountMinor: number, values: ExpenseFormValues) 
 export async function softDeleteExpense(householdId: string, expenseId: string) {
   await updateDoc(doc(db, "households", householdId, "expenses", expenseId), {
     deletedAt: serverTimestamp(),
+    updatedAt: serverTimestamp()
+  });
+}
+
+export async function softDeleteInstallmentPlan(householdId: string, planId: string) {
+  await updateDoc(doc(db, "households", householdId, "installmentPlans", planId), {
+    active: false,
+    deletedAt: serverTimestamp(),
+    updatedAt: serverTimestamp()
+  });
+}
+
+export async function toggleInstallmentPlan(householdId: string, planId: string, active: boolean) {
+  await updateDoc(doc(db, "households", householdId, "installmentPlans", planId), {
+    active,
     updatedAt: serverTimestamp()
   });
 }
@@ -445,6 +490,61 @@ export async function materializeDueRecurringExpenses(
   }
 }
 
+export async function materializeDueInstallmentExpenses(
+  householdId: string,
+  userUid: string,
+  members: HouseholdMember[],
+  plans: InstallmentPlan[],
+  today = new Date()
+) {
+  const memberUids = members.map((member) => member.uid);
+  if (!memberUids.length) return;
+
+  for (const plan of plans.filter((item) => item.active && !item.deletedAt)) {
+    if (plan.householdId !== householdId) continue;
+    if (!memberUids.includes(plan.paidByUid)) continue;
+    if (!plan.participants.every((uid) => memberUids.includes(uid))) continue;
+
+    const count = Math.min(Math.max(plan.installmentCount, 1), 12);
+    for (let index = 1; index <= count; index += 1) {
+      const date = addMonthsClamped(toDateValue(plan.firstPaymentDate), index - 1);
+      if (date > today) continue;
+
+      const expenseId = `${plan.id}_${String(index).padStart(2, "0")}`;
+      const expenseRef = doc(db, "households", householdId, "expenses", expenseId);
+      const planRef = doc(db, "households", householdId, "installmentPlans", plan.id);
+      const planSnapshot = await getDoc(planRef);
+      if (!planSnapshot.exists()) continue;
+      const latestPlan = planSnapshot.data() as InstallmentPlan;
+      if (latestPlan.householdId !== householdId || latestPlan.deletedAt || !latestPlan.active) continue;
+
+      const existingExpense = await getDoc(expenseRef);
+      if (existingExpense.exists()) continue;
+
+      const amountMinor = installmentAmountAt(plan.totalAmountMinor, count, index);
+      await setDoc(expenseRef, {
+        householdId,
+        description: plan.description,
+        amountMinor,
+        currency: "ILS",
+        category: plan.category,
+        paidByUid: plan.paidByUid,
+        splitType: plan.splitType,
+        participants: plan.participants,
+        shares: installmentSharesAt(plan.shares, plan.totalAmountMinor, count, index),
+        date: formatInputDate(date),
+        notes: plan.notes ?? "",
+        installmentPlanId: plan.id,
+        installmentIndex: index,
+        installmentCount: count,
+        createdByUid: userUid,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      });
+    }
+  }
+}
+
 export async function createSettlement(householdId: string, userUid: string, values: SettlementFormValues) {
   const settlementRef = await addDoc(collection(db, "households", householdId, "settlements"), {
     householdId,
@@ -489,6 +589,58 @@ function dueDateForMonth(month: string, dayOfMonth: number) {
   const [year, monthNumber] = month.split("-").map(Number);
   const lastDay = new Date(year, monthNumber, 0).getDate();
   return new Date(year, monthNumber - 1, Math.min(dayOfMonth, lastDay));
+}
+
+function installmentAmountAt(totalAmountMinor: number, count: number, index: number) {
+  const base = Math.floor(totalAmountMinor / count);
+  return index === count ? totalAmountMinor - base * (count - 1) : base;
+}
+
+function installmentSharesAt(totalShares: Record<string, number>, totalAmountMinor: number, count: number, index: number) {
+  if (index === count) {
+    const previousShares = Array.from({ length: count - 1 }, (_, offset) =>
+      installmentSharesAt(totalShares, totalAmountMinor, count, offset + 1)
+    );
+
+    return Object.keys(totalShares).reduce<Record<string, number>>((shares, uid) => {
+      const previousTotal = previousShares.reduce((sum, item) => sum + (item[uid] ?? 0), 0);
+      shares[uid] = totalShares[uid] - previousTotal;
+      return shares;
+    }, {});
+  }
+
+  const installmentAmount = installmentAmountAt(totalAmountMinor, count, index);
+  const entries = Object.entries(totalShares).map(([uid, share]) => {
+    const exact = totalAmountMinor > 0 ? (installmentAmount * share) / totalAmountMinor : 0;
+    const base = Math.floor(exact);
+    return { uid, base, remainder: exact - base };
+  });
+  let remaining = installmentAmount - entries.reduce((sum, entry) => sum + entry.base, 0);
+
+  return entries
+    .sort((a, b) => b.remainder - a.remainder)
+    .reduce<Record<string, number>>((shares, entry) => {
+      shares[entry.uid] = entry.base + (remaining > 0 ? 1 : 0);
+      remaining -= 1;
+      return shares;
+    }, {});
+}
+
+function addMonthsClamped(date: Date, months: number) {
+  const year = date.getFullYear();
+  const month = date.getMonth() + months;
+  const target = new Date(year, month, 1);
+  const lastDay = new Date(target.getFullYear(), target.getMonth() + 1, 0).getDate();
+  target.setDate(Math.min(date.getDate(), lastDay));
+  return target;
+}
+
+function toDateValue(value: InstallmentPlan["firstPaymentDate"]) {
+  if (value instanceof Date) return value;
+  if (typeof value === "string" || typeof value === "number") return new Date(value);
+  if (value && typeof value === "object" && "toDate" in value) return value.toDate();
+  if (value && typeof value === "object" && "seconds" in value) return new Date(value.seconds * 1000);
+  return new Date();
 }
 
 function formatInputDate(date: Date) {

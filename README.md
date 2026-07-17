@@ -1,6 +1,6 @@
-# CoupleSplit
+# SplitNest
 
-CoupleSplit is a mobile-first expense-splitting app for a two-person household. It supports shared expenses, flexible split modes, recurring bills, settlements, invite-code onboarding, and system-aware light/dark theme behavior.
+SplitNest is a mobile-first expense-splitting app for households, couples, trips, and shared groups. It supports shared expenses, flexible split modes, recurring bills, monthly installments, settlements, invite-code onboarding, and system-aware light/dark theme behavior.
 
 The app is built with Next.js App Router, TypeScript, Tailwind CSS, Firebase Authentication, Cloud Firestore, React Hook Form, Zod, date-fns, lucide-react, and Vitest.
 

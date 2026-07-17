@@ -131,6 +131,37 @@ service cloud.firestore {
           == request.resource.data.amountMinor;
     }
 
+    function validPlanShareAt(index) {
+      return request.resource.data.participants.size() <= index
+        || (
+          request.resource.data.shares[request.resource.data.participants[index]] is int
+          && request.resource.data.shares[request.resource.data.participants[index]] >= 0
+        );
+    }
+
+    function planShareAt(index) {
+      return request.resource.data.participants.size() > index
+        ? request.resource.data.shares[request.resource.data.participants[index]]
+        : 0;
+    }
+
+    function validInstallmentPlanShares() {
+      return request.resource.data.shares is map
+        && request.resource.data.shares.keys().size() == request.resource.data.participants.size()
+        && request.resource.data.shares.keys().hasAll(request.resource.data.participants)
+        && validPlanShareAt(0)
+        && validPlanShareAt(1)
+        && validPlanShareAt(2)
+        && validPlanShareAt(3)
+        && validPlanShareAt(4)
+        && validPlanShareAt(5)
+        && validPlanShareAt(6)
+        && validPlanShareAt(7)
+        && planShareAt(0) + planShareAt(1) + planShareAt(2) + planShareAt(3)
+          + planShareAt(4) + planShareAt(5) + planShareAt(6) + planShareAt(7)
+          == request.resource.data.totalAmountMinor;
+    }
+
     function validExpenseCreate(householdId) {
       return isHouseholdMember(householdId)
         && request.resource.data.householdId == householdId
@@ -193,6 +224,32 @@ service cloud.firestore {
     }
 
     function validRecurringBillSoftDelete(householdId) {
+      return isHouseholdMember(householdId)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["active", "deletedAt", "updatedAt"])
+        && request.resource.data.createdByUid == resource.data.createdByUid
+        && request.resource.data.householdId == householdId;
+    }
+
+    function validInstallmentPlanWrite(householdId) {
+      return isHouseholdMember(householdId)
+        && request.resource.data.householdId == householdId
+        && request.resource.data.totalAmountMinor is int
+        && request.resource.data.totalAmountMinor > 0
+        && request.resource.data.currency == "ILS"
+        && request.resource.data.description is string
+        && request.resource.data.category is string
+        && request.resource.data.paidByUid in householdData(householdId).memberIds
+        && request.resource.data.splitType in ["equal", "one_person", "amounts", "percentage"]
+        && validExpenseParticipants(householdId)
+        && validInstallmentPlanShares()
+        && request.resource.data.firstPaymentDate is string
+        && request.resource.data.installmentCount is int
+        && request.resource.data.installmentCount >= 2
+        && request.resource.data.installmentCount <= 12
+        && request.resource.data.active is bool;
+    }
+
+    function validInstallmentPlanSoftDelete(householdId) {
       return isHouseholdMember(householdId)
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["active", "deletedAt", "updatedAt"])
         && request.resource.data.createdByUid == resource.data.createdByUid
@@ -263,6 +320,18 @@ service cloud.firestore {
         allow update: if validRecurringBillSoftDelete(householdId)
           || (
             validRecurringBillWrite(householdId)
+            && request.resource.data.createdByUid == resource.data.createdByUid
+          );
+        allow delete: if false;
+      }
+
+      match /installmentPlans/{installmentPlanId} {
+        allow read: if isHouseholdMember(householdId);
+        allow create: if validInstallmentPlanWrite(householdId)
+          && request.resource.data.createdByUid == request.auth.uid;
+        allow update: if validInstallmentPlanSoftDelete(householdId)
+          || (
+            validInstallmentPlanWrite(householdId)
             && request.resource.data.createdByUid == resource.data.createdByUid
           );
         allow delete: if false;

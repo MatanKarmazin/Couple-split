@@ -6,19 +6,22 @@ import { ThemeProvider } from "@/hooks/useTheme";
 import { ToastProvider } from "@/components/ui/toast";
 
 export const metadata: Metadata = {
-  applicationName: "CoupleSplit",
-  title: "CoupleSplit",
+  applicationName: "SplitNest",
+  title: "SplitNest",
   description: "A private expense-splitting app for couples.",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
-    title: "CoupleSplit",
+    title: "SplitNest",
     statusBarStyle: "default"
   },
   icons: {
     icon: [
-      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
-      { url: "/icon-512.png", sizes: "512x512", type: "image/png" }
+      { url: "/favicon.ico", type: "image/x-icon" },
+      { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
+      { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+      { url: "/android-chrome-192x192.png", sizes: "192x192", type: "image/png" },
+      { url: "/android-chrome-512x512.png", sizes: "512x512", type: "image/png" }
     ],
     apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }]
   }
@@ -37,7 +40,7 @@ export const viewport: Viewport = {
 const themeScript = `
 (() => {
   try {
-    const stored = localStorage.getItem("couplesplit-theme");
+    const stored = localStorage.getItem("splitnest-theme");
     const mode = stored === "light" || stored === "dark" ? stored : "system";
     const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
     document.documentElement.classList.toggle("dark", mode === "dark" || (mode === "system" && prefersDark));
@@ -50,7 +53,7 @@ const themeScript = `
 const languageScript = `
 (() => {
   try {
-    const stored = localStorage.getItem("couplesplit-language");
+    const stored = localStorage.getItem("splitnest-language");
     const language = stored === "he" || stored === "en"
       ? stored
       : navigator.language.toLowerCase().startsWith("he") ? "he" : "en";
