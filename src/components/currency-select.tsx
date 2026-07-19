@@ -48,8 +48,9 @@ export function CurrencySelect({
 
   return (
     <Field label={label} error={error}>
-      <div className="grid gap-2">
+      <div className="grid w-full min-w-0 max-w-full gap-2 overflow-hidden">
         <Select
+          className="w-full min-w-0 max-w-full"
           value={mode === "other" ? "OTHER" : normalizedValue}
           onChange={(event) => {
             if (event.target.value === "OTHER") {
@@ -64,7 +65,11 @@ export function CurrencySelect({
           <option value="OTHER">{t("common.other")}</option>
         </Select>
         {mode === "other" ? (
-          <Select value={isQuickCurrency(normalizedValue) ? "" : normalizedValue} onChange={(event) => onChange(event.target.value)}>
+          <Select
+            className="w-full min-w-0 max-w-full"
+            value={isQuickCurrency(normalizedValue) ? "" : normalizedValue}
+            onChange={(event) => onChange(event.target.value)}
+          >
             <option value="">{t("common.chooseCurrency")}</option>
             {otherCurrencies.map((currency) => (
               <option key={currency.code} value={currency.code}>{currency.code} - {currency.name}</option>

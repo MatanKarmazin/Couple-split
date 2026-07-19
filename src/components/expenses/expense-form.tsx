@@ -118,7 +118,7 @@ export function ExpenseForm({
       <Field label={t("expenses.description")} error={errors.description?.message}>
         <Input placeholder={t("expenses.descriptionPlaceholder")} {...register("description")} />
       </Field>
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid min-w-0 gap-4 sm:grid-cols-3">
         <Field label={t("common.amount")} error={errors.amount?.message}>
           <Input inputMode="decimal" placeholder="123.45" {...register("amount")} />
         </Field>

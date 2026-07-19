@@ -84,7 +84,7 @@ export default function SettleUpPage() {
               </Select>
             </Field>
           </div>
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid min-w-0 gap-4 sm:grid-cols-3">
             <Field label={t("common.amount")} error={form.formState.errors.amount?.message}>
               <Input inputMode="decimal" {...form.register("amount")} />
             </Field>

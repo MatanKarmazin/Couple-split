@@ -100,7 +100,7 @@ export function RecurringBillsPanel({ showHeader = true }: { showHeader?: boolea
             <Field label={t("expenses.description")} error={form.formState.errors.description?.message}>
               <Input placeholder={t("recurring.descriptionPlaceholder")} {...form.register("description")} />
             </Field>
-            <div className="grid gap-4 sm:grid-cols-3">
+            <div className="grid min-w-0 gap-4 sm:grid-cols-3">
               <Field label={t("common.amount")} error={form.formState.errors.amount?.message}>
                 <Input inputMode="decimal" placeholder="4500.00" {...form.register("amount")} />
               </Field>
